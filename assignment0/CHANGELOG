@@ -1,0 +1,11 @@
+# assignment0 changelog
+## Connor Tynan (ctynan)
+
+- January 22 2025: Working time today - 120 min; total time - 120 min
+    - Started project
+    - Finished basic implemenation
+    - Works from my testing, needs more rigorous testing
+    - Maybe look into more complex algorithm to guarantee solution when possible (backtracking) 
+
+- January 23 2025: Working time today - 30 min; total time - 150 min
+    - Added Makefile

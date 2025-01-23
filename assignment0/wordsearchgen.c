@@ -1,0 +1,194 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
+
+static char board[20 * 20] = {0};
+static int board_size;
+
+static char *board_at(int x, int y)
+{
+    if (x < 0 || x >= board_size || y < 0 || y >= board_size)
+    {
+        fprintf(stderr, "ERROR: Out-of-bounds access at (%d, %d)\n", x, y);
+        return NULL;
+    }
+    return &board[x + y * board_size];
+}
+
+// Given (x, y) coordinates, direction, and word_len, return 1
+// if it fits in the bounds of the board defined by board_size
+int valid_start(int x, int y, int d, int len)
+{
+    switch (d)
+    {
+    case 0: // Diagonal up
+        return (x <= board_size - len) && (y > len - 1);
+    case 1: // Rightward
+        return (x <= board_size - len);
+    case 2: // Diagonal down
+        return (x <= board_size - len) && (y <= board_size - len);
+    case 3: // Downward
+        return (y <= board_size - len);
+    default:
+        fprintf(stderr, "ERROR: undefined direction in valid_start(%d, %d, __%d__, %d)\n", x, y, d, len);
+        return 0;
+    }
+}
+
+// Given coordinate of top-left letter, direction and letter num, return the current letter on the board that is in that spot
+char *coord_of_letter(int start_x, int start_y, int d, int letter_num)
+{
+    switch (d)
+    {
+    case 0: // Diagonal up
+        return board_at(start_x + letter_num, start_y - letter_num);
+    case 1: // Rightward
+        return board_at(start_x + letter_num, start_y);
+    case 2: // Diagonal down
+        return board_at(start_x + letter_num, start_y + letter_num);
+    case 3: // Downward
+        return board_at(start_x, start_y + letter_num);
+    default:
+        fprintf(stderr, "ERROR: undefined direction in coord_of_letter(%d, %d, __%d__, %d)\n", start_x, start_y, d, letter_num);
+        return NULL;
+    }
+}
+
+// Attempt to insert a given word in the current board at every location
+// Return 1 if successfully found a spot, 0 otherwise
+int insert_word(char *word, int len)
+{
+    // coordinates of top-left letter
+    int x = rand() % board_size;
+    int y = rand() % board_size;
+    int d = rand() % 4; // Direction of word (R0, RU, RD, 0D)
+
+    for (int dy = 0; dy < board_size; dy++)
+    {
+        y = (y + 1) % board_size;
+
+        for (int dx = 0; dx < board_size; dx++)
+        {
+            x = (x + 1) % board_size;
+            for (int dd = 0; dd < 4; dd++)
+            {
+                d = (d + 1) % 4;
+
+                if (!valid_start(x, y, d, len)) // word doesn't fit in the board in this layout
+                    continue;
+
+                int valid_location = 1;
+                // see if all letter spots in new word are either empty or match the needed letter
+                for (int i = 0; i < len; i++)
+                {
+                    char letter = word[i];
+                    char *cell = coord_of_letter(x, y, d, i);
+                    if (*cell != 0 && *cell != letter)
+                    {
+                        // Letter doesn't fit, go to next position
+                        valid_location = 0;
+                        break;
+                    }
+                }
+
+                if (valid_location)
+                {
+                    // if we reach here, the word completely fits, so add it
+                    for (int i = 0; i < len; i++)
+                    {
+                        char letter = word[i];
+                        char *cell = coord_of_letter(x, y, d, i);
+                        *cell = letter;
+                    }
+                    return 1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+// Given a board, replaces all empty squares ('\0') with a random ascii character
+void fill_board()
+{
+    for (int y = 0; y < board_size; y++)
+    {
+        for (int x = 0; x < board_size; x++)
+        {
+            char *cell = board_at(x, y);
+            if (*cell == 0)
+            {
+                // random lowercase ascii character
+                *cell = (rand() % 26) + 97;
+            }
+        }
+    }
+}
+
+void print_board()
+{
+    for (int y = 0; y < board_size; y++)
+    {
+        for (int x = 0; x < board_size; x++)
+        {
+            char *cell = board_at(x, y);
+            printf("%c ", *cell);
+        }
+        printf("\n");
+    }
+}
+
+int main(int argc, char *argv[])
+{
+    if (argc < 2)
+    {
+        fprintf(stderr,
+                "ERROR: invalid arguments!\n"
+                " Usage: %s <size> [word1, word2, ...]\n"
+                " size MUST be an integer from [1, 20] (inclusive)\n",
+                argv[0]);
+        return -1;
+    }
+
+    // Get the size from the first argument (after the program)
+    board_size = atoi(argv[1]);
+
+    if (board_size < 0 || board_size > 20)
+    {
+        fprintf(stderr,
+                "ERROR: invalid arguments!\n"
+                " Usage: %s <size> [word1, word2, ...]\n"
+                " size MUST be an integer from [1, 20] (inclusive) (entered: %s)\n",
+                argv[0], argv[1]);
+        return -1;
+    }
+
+    srand(time(NULL));
+
+    for (int i = 2; i < argc; i++)
+    {
+        char *word = argv[i];
+        if (!insert_word(word, strlen(word)))
+        {
+            fprintf(stderr, "Failed to insert %s", word);
+            return -1;
+        }
+    }
+
+    fill_board();
+    print_board();
+
+    // print word list:
+    printf("+----------------------+\n"
+           "|      WORD LIST:      |\n");
+
+    for (int i = 2; i < argc; i++)
+    {
+        char *word = argv[i];
+        printf("| %-20s |\n", word);
+    }
+    printf("+----------------------+\n");
+
+    return 0;
+}

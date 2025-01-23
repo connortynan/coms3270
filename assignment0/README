@@ -1,0 +1,15 @@
+# assignment0
+## Connor Tynan (ctynan)
+
+Word search generator, given a board size and a list of words as command line arguments, generates a word search with all words and prints it to the terminal with a word list.
+
+Build Instruction:
+```
+# navigate to source directory
+make
+```
+
+Usage:
+```
+./wordsearchgen <size> [word1, word2, ...] 
+```
