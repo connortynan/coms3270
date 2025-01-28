@@ -1,7 +1,65 @@
 # assignment0
 ## Connor Tynan (ctynan)
 
-Word search generator, given a board size and a list of words as command line arguments, generates a word search with all words and prints it to the terminal with a word list.
+Word search generator, given a board size and a list of words as command line arguments, generates a word search with all words and prints it to the terminal with a word list. Implements recursive backtracking, so any word list that has a possible solution will give a completed result.
+
+---
+
+Words can be placed in four directions: (↗ diagonal up,  → rightward, ↘ diagonal down, ↓ downward), meaning words will never be backwards horizontally (right-to-left), but can be written down-to-up if also diagonally left-to-right (but not purely vertical down-to-up)
+
+---
+
+Example: 'crossword'
+
+<details>
+<summary>These are the only 4 ways you'll find the word 'crossword' written on the board:</summary>
+
+<br>
+
+```
+                d
+              r
+            o
+          w
+        s
+      s
+    o
+  r
+c
+```
+
+```
+c r o s s w o r d
+```
+```
+c
+  r
+    o
+      s
+        s
+          w
+            o
+              r
+                d
+```
+```
+c
+r
+o
+s
+s
+w
+o
+r
+d
+```
+</details>
+
+---
+
+The board memory is dynamically allocated, so the board can be any size as long as it's a positive integer. The code sets a upper bound according to the specification, but this is a design choice, not a technical limitation.
+
+---
 
 Build Instruction:
 ```
@@ -11,5 +69,5 @@ make
 
 Usage:
 ```
-./wordsearchgen <size> [word1, word2, ...] 
+build/wordsearchgen <size> [word1, word2, ...] 
 ```

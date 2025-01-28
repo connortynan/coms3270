@@ -7,5 +7,16 @@
     - Works from my testing, needs more rigorous testing
     - Maybe look into more complex algorithm to guarantee solution when possible (backtracking) 
 
-- January 23 2025: Working time today - 30 min; total time - 150 min
+- January 23 2025: Working time today - 240 min; total time - 360 min
     - Added Makefile
+    - Started backtracking algorithm (WIP)
+
+- January 25 2025: Working time today - 120 min; total time - 480 min
+    - Completed backtracking algorithm
+    - Debugged backtracking logic
+    - Stress test with 50+ words
+
+- January 26 2025: Working time today - 120 minutes; total time - 600 min
+    - Switched to recursive backtracking instead of iterative
+    - Added dynamic board allocation to allow for larger crosswords
+    - Bug tested and made sure backtracking finds a solution if possible
