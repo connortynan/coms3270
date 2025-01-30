@@ -7,26 +7,46 @@
 
 #define MAX_SIZE 20
 
-size_t itr_count = 0;
-
 typedef struct
 {
     char letter;
     uint8_t overlap_count;
 } board_cell;
 
-uint8_t board_size;
+typedef enum
+{
+    DIAGONAL_UP,
+    RIGHT,
+    DIAGONAL_DOWN,
+    DOWN,
+    DIRECTION_COUNT
+} word_direction;
+
+typedef struct
+{
+    uint16_t x;
+    uint16_t y;
+    word_direction dir;
+} word_location;
+
+uint16_t board_size;
 #define board_index(x, y) (((x) * board_size) + (y))
 board_cell *board;
 
-bool valid_start(int x, int y, int d, int word_len);
-board_cell *letter_location(int start_x, int start_y, int d, int letter_of_word);
-bool word_fits(int start_x, int start_y, int d, char *word);
+bool valid_start(uint16_t x, uint16_t y, word_direction d, int word_len);
+board_cell *letter_location(uint16_t start_x, uint16_t start_y, word_direction d, int letter_of_word);
+bool word_fits(uint16_t start_x, uint16_t start_y, word_direction d, char *word);
 
-void insert_word(int start_x, int start_y, int d, char *word);
-void remove_word(int start_x, int start_y, int d, int word_len);
+void insert_word(uint16_t start_x, uint16_t start_y, word_direction d, char *word);
+void remove_word(uint16_t start_x, uint16_t start_y, word_direction d, int word_len);
 
-bool solve_words(int word_count, char *word_list[]);
+// Writes to the given buffer in random order (must be malloced!) and returns the working size of the array
+size_t generate_locations(word_location *locations, int word_len);
+
+void shuffle_array(word_location *arr, size_t size);
+
+int solve_words(int word_count, char *word_list[]);
+void reset_board();
 void fill_board();
 void print_board();
 void print_word_list(int word_count, char *word_list[]);
@@ -42,10 +62,10 @@ int main(int argc, char *argv[])
                 " Usage: %s <size> [word1, word2, ...]\n"
                 " size MUST be a positive integer <%d\n",
                 argv[0], MAX_SIZE);
-        return -1;
+        return 1;
     }
 
-    // Get the size from the first argument (after the program)
+    // Get the size from the first argument
     board_size = atoi(argv[1]);
 
     if (board_size < 0 || board_size > MAX_SIZE)
@@ -55,77 +75,145 @@ int main(int argc, char *argv[])
                 " Usage: %s <size> [word1, word2, ...]\n"
                 " size MUST be a positive integer <%d (entered: %s)\n",
                 argv[0], MAX_SIZE, argv[1]);
-        return -1;
+        return 1;
     }
 
     board = (board_cell *)malloc(board_size * board_size * sizeof(board_cell));
     if (!board)
     {
         fprintf(stderr, "Memory allocation error\n");
-        free(board);
-        return -1;
+        return 1;
     }
 
-    if (argc >= 3)
+    reset_board();
+
+    int num_words = argc - 2;
+
+    if (num_words < 1)
     {
-        if (!solve_words(argc - 2, &argv[2]))
-        {
-            fprintf(stderr, "Failed to solve word search generation\n");
-            free(board);
-            return -1;
-        }
+        fprintf(stderr,
+                "ERROR: invalid arguments!\n"
+                " Usage: %s <size> [word1, word2, ...]\n"
+                " Enter at least one word to create the puzzle\n",
+                argv[0]);
+        return 1;
+    }
+
+    if (solve_words(num_words, &argv[2]))
+    {
+        fprintf(stderr, "Failed to solve word search generation\n");
+        free(board);
+        return 1;
     }
 
     fill_board();
     print_board();
-    print_word_list(argc - 2, &argv[2]);
+    print_word_list(num_words, &argv[2]);
 
     free(board);
     return 0;
 }
 
-bool solve_words_rec(int stack_idx, int word_count, char *word_list[])
+int solve_words_rec(int word_num, int word_count, char *word_list[])
 {
-    if (stack_idx == word_count)
+    if (word_num == word_count)
     {
-        return true;
+        return 0; // Success
     }
 
-    char *word = word_list[stack_idx];
+    char *word = word_list[word_num];
     int word_len = strlen(word);
 
-    int x = rand() % board_size;
-    int y = rand() % board_size;
-    int d = rand() % 4;
+    word_location *possible_locations = (word_location *)malloc(board_size * board_size * DIRECTION_COUNT * sizeof(word_location));
 
-    int dx, dy, dd;
-
-    for (dx = 0; dx < board_size; dx++, x = (x + 1) % board_size)
+    if (!possible_locations)
     {
-        for (dy = 0; dy < board_size; dy++, y = (y + 1) % board_size)
+        fprintf(stderr, "Memory allocation failed in solve_words_rec\n");
+        return 0; // Success
+    }
+
+    size_t num_locations = generate_locations(possible_locations, word_len);
+
+    size_t i;
+    for (i = 0; i < num_locations; i++)
+    {
+        word_location loc = possible_locations[i];
+        if (word_fits(loc.x, loc.y, loc.dir, word))
         {
-            for (dd = 0; dd < 4; dd++, d = (d + 1) % 4)
+            insert_word(loc.x, loc.y, loc.dir, word);
+            if (!solve_words_rec(word_num + 1, word_count, word_list))
             {
-                itr_count++;
-                if (valid_start(x, y, d, word_len) && word_fits(x, y, d, word))
+                free(possible_locations);
+                return 0; // Found a solution, success
+            }
+            remove_word(loc.x, loc.y, loc.dir, word_len);
+        }
+    }
+    free(possible_locations);
+    return 1; // No valid placement for this word, backtrack
+}
+
+int solve_words(int word_count, char *word_list[])
+{
+    return solve_words_rec(0, word_count, word_list);
+}
+
+size_t generate_locations(word_location *locations, int word_len)
+{
+    int x, y;
+    word_direction d;
+    size_t count = 0;
+    word_location loc;
+    for (x = 0; x < board_size; x++)
+    {
+        loc.x = x;
+        for (y = 0; y < board_size; y++)
+        {
+            loc.y = y;
+            for (d = 0; d < DIRECTION_COUNT; d++)
+            {
+                loc.dir = d;
+                if (valid_start(x, y, d, word_len))
                 {
-                    insert_word(x, y, d, word);
-                    if (solve_words_rec(stack_idx + 1, word_count, word_list))
-                    {
-                        return true; // Found a solution
-                    }
-                    remove_word(x, y, d, word_len); // Backtrack
+                    locations[count++] = loc;
                 }
             }
         }
     }
-
-    return false; // No valid placement for this word
+    shuffle_array(locations, count);
+    return count;
 }
 
-bool solve_words(int word_count, char *word_list[])
+void shuffle_array(word_location *arr, size_t count)
 {
-    return solve_words_rec(0, word_count, word_list);
+    if (count < 2)
+    {
+        return;
+    }
+
+    word_location t;
+    size_t i, j;
+    for (i = 0; i < count; i++)
+    {
+        j = i + (rand() % (count - i));
+        t = arr[i];
+        arr[i] = arr[j];
+        arr[j] = t;
+    }
+}
+
+void reset_board()
+{
+    int x, y;
+    for (y = 0; y < board_size; y++)
+    {
+        for (x = 0; x < board_size; x++)
+        {
+            board_cell *cell = &board[board_index(x, y)];
+            cell->letter = 0;
+            cell->overlap_count = 0;
+        }
+    }
 }
 
 void fill_board()
@@ -148,7 +236,7 @@ void print_board()
     {
         for (x = 0; x < board_size; x++)
         {
-            printf("%c", board[board_index(x, y)].letter ? board[board_index(x, y)].letter : '-');
+            printf("%c ", board[board_index(x, y)].letter ? board[board_index(x, y)].letter : '-');
         }
         printf("\n");
     }
@@ -168,35 +256,35 @@ void print_word_list(int word_count, char *word_list[])
     printf("+----------------------+\n");
 }
 
-bool valid_start(int x, int y, int d, int word_len)
+bool valid_start(uint16_t start_x, uint16_t start_y, word_direction d, int word_len)
 {
     switch (d)
     {
-    case 0: // Diagonal up
-        return (x <= board_size - word_len) && (y > word_len - 1);
-    case 1: // Rightward
-        return (x <= board_size - word_len);
-    case 2: // Diagonal down
-        return (x <= board_size - word_len) && (y <= board_size - word_len);
-    case 3: // Downward
-        return (y <= board_size - word_len);
+    case DIAGONAL_UP:
+        return (start_x <= board_size - word_len) && (start_y > word_len - 1);
+    case RIGHT:
+        return (start_x <= board_size - word_len);
+    case DIAGONAL_DOWN:
+        return (start_x <= board_size - word_len) && (start_y <= board_size - word_len);
+    case DOWN:
+        return (start_y <= board_size - word_len);
     default:
-        fprintf(stderr, "ERROR: undefined direction in valid_start(%d, %d, __%d__, %d)\n", x, y, d, word_len);
+        fprintf(stderr, "ERROR: undefined direction in valid_start(%d, %d, __%d__, %d)\n", start_x, start_y, d, word_len);
         return 0;
     }
 }
 
-board_cell *letter_location(int start_x, int start_y, int d, int letter_of_word)
+board_cell *letter_location(uint16_t start_x, uint16_t start_y, word_direction d, int letter_of_word)
 {
     switch (d)
     {
-    case 0: // Diagonal up
+    case DIAGONAL_UP:
         return &board[board_index(start_x + letter_of_word, start_y - letter_of_word)];
-    case 1: // Rightward
+    case RIGHT:
         return &board[board_index(start_x + letter_of_word, start_y)];
-    case 2: // Diagonal down
+    case DIAGONAL_DOWN:
         return &board[board_index(start_x + letter_of_word, start_y + letter_of_word)];
-    case 3: // Downward
+    case DOWN:
         return &board[board_index(start_x, start_y + letter_of_word)];
     default:
         fprintf(stderr, "ERROR: undefined direction in coord_of_letter(%d, %d, __%d__, %d)\n", start_x, start_y, d, letter_of_word);
@@ -204,12 +292,12 @@ board_cell *letter_location(int start_x, int start_y, int d, int letter_of_word)
     }
 }
 
-bool word_fits(int start_x, int start_y, int d, char *word)
+bool word_fits(uint16_t start_x, uint16_t start_y, word_direction d, char *word)
 {
     int i;
     char letter;
-
-    for (i = 0; i < strlen(word); i++)
+    int word_len = strlen(word);
+    for (i = 0; i < word_len; i++)
     {
         letter = word[i];
         board_cell *cell = letter_location(start_x, start_y, d, i);
@@ -227,10 +315,11 @@ bool word_fits(int start_x, int start_y, int d, char *word)
     return true;
 }
 
-void insert_word(int start_x, int start_y, int d, char *word)
+void insert_word(uint16_t start_x, uint16_t start_y, word_direction d, char *word)
 {
     int i;
-    for (i = 0; i < strlen(word); i++)
+    int word_len = strlen(word);
+    for (i = 0; i < word_len; i++)
     {
         board_cell *cell = letter_location(start_x, start_y, d, i);
         cell->letter = word[i];
@@ -238,7 +327,7 @@ void insert_word(int start_x, int start_y, int d, char *word)
     }
 }
 
-void remove_word(int start_x, int start_y, int d, int word_len)
+void remove_word(uint16_t start_x, uint16_t start_y, word_direction d, int word_len)
 {
     int i;
     for (i = 0; i < word_len; i++)

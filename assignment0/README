@@ -1,67 +1,25 @@
 # assignment0
 ## Connor Tynan (ctynan)
 
-Word search generator, given a board size and a list of words as command line arguments, generates a word search with all words and prints it to the terminal with a word list. Implements recursive backtracking, so any word list that has a possible solution will give a completed result.
+Given a board size and a list of words as command line arguments, generates a word search with all words and prints it to the terminal with a word list. 
+
+This generator implements backtracking, so any word list that has a possible solution for a given board size will sucessfully find a solution (albeit very slow for large and dense boards).
 
 ---
 
-Words can be placed in four directions: (↗ diagonal up,  → rightward, ↘ diagonal down, ↓ downward), meaning words will never be backwards horizontally (right-to-left), but can be written down-to-up if also diagonally left-to-right (but not purely vertical down-to-up)
+Words can be placed in four directions: (↗ diagonal up,  → rightward, ↘ diagonal down, ↓ downward).
+
+It is recommended to use all lowercase for the given word list, as the randomly filled characters are all lower case.
 
 ---
 
-Example: 'crossword'
+The first argument is the board size, which must be a positive integer less than 20, as per the project specification.
 
-<details>
-<summary>These are the only 4 ways you'll find the word 'crossword' written on the board:</summary>
-
-<br>
-
-```
-                d
-              r
-            o
-          w
-        s
-      s
-    o
-  r
-c
-```
-
-```
-c r o s s w o r d
-```
-```
-c
-  r
-    o
-      s
-        s
-          w
-            o
-              r
-                d
-```
-```
-c
-r
-o
-s
-s
-w
-o
-r
-d
-```
-</details>
+The second and onwards arguments are the word lists, which are seperated by spaces.
 
 ---
 
-The board memory is dynamically allocated, so the board can be any size as long as it's a positive integer. The code sets a upper bound according to the specification, but this is a design choice, not a technical limitation.
-
----
-
-Build Instruction:
+Build:
 ```
 # navigate to source directory
 make
@@ -69,5 +27,10 @@ make
 
 Usage:
 ```
-build/wordsearchgen <size> [word1, word2, ...] 
+bin/wordsearchgen <board_size> [word1, word2, ...] 
+```
+
+Uninstall:
+```
+make clean
 ```

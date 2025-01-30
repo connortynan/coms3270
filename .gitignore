@@ -1,2 +1,6 @@
 .vscode
 build
+bin
+tests
+
+*.tar.gz

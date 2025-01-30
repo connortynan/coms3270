@@ -1,27 +1,16 @@
-# Compiler and flags
 CC = gcc
-CFLAGS = -Wall -g
+CFLAGS = -Wall -Werror -g
 LDFLAGS =
 
-# Directories
-SRC_DIR = .
-BUILD_DIR = build
+BIN_DIR = bin
+SRC = wordsearchgen.c
+TARGET = $(BIN_DIR)/wordsearchgen
 
-# Source and target
-SRC = $(SRC_DIR)/wordsearchgen.c
-TARGET = $(BUILD_DIR)/wordsearchgen
-
-# Build target
 all: $(TARGET)
 
-# Rule to compile and link
 $(TARGET): $(SRC)
-	@mkdir -p $(BUILD_DIR)
+	mkdir -p $(BIN_DIR)
 	$(CC) $(CFLAGS) $(SRC) -o $(TARGET) $(LDFLAGS)
 
-# Clean up build artifacts
 clean:
-	rm -rf $(BUILD_DIR)
-
-# Phony targets
-.PHONY: all clean
+	rm -rf $(BIN_DIR)
