@@ -3,17 +3,29 @@
 #include "common.h"
 
 /**
- * @enum dungeon_cell
+ * @enum dungeon_cell_t
  *
- * @brief Enumerator of all static cell states, each with special properties
+ * @brief Enumerator of all static cell types, each with special properties
  */
-typedef enum
-{
+typedef enum {
     ROCK,      /**< Solid walls, cannot be traversed over */
     ROOM,      /**< Room floor */
     CORRIDOR,  /**< Corridor floor, which connects rooms */
     STAIR_UP,  /**< Upwards staircase which takes you to the dungeon connected above */
     STAIR_DOWN /**< Downwards staircase which takes you to the dungeon connected below */
+} dungeon_cell_t;
+
+/**
+ * @struct dungeon_cell
+ *
+ * @brief Represents a dungeon cell with specific properties.
+ *
+ * Each dungeon cell has a type defined by `dungeon_cell_t` and an associated hardness value.
+ * Hardness can influence traversal difficulty for generating corridors.
+ */
+typedef struct {
+    dungeon_cell_t type;
+    uint8_t hardness;
 } dungeon_cell;
 
 /**
@@ -27,8 +39,7 @@ typedef enum
  * @var up, down
  * Pointers to dungeons above and below, respectively.
  */
-typedef struct
-{
+typedef struct dungeon_data {
     dungeon_cell cells[DUNGEON_WIDTH][DUNGEON_HEIGHT]; /**< Dungeon cell data. Indexed by [x][y] with [0][0] being the top-left corner */
 
     struct dungeon_data *north; /**< Pointer to the northern dungeon. */
@@ -39,8 +50,7 @@ typedef struct
     struct dungeon_data *down;  /**< Pointer to the dungeon below. */
 } dungeon_data;
 
-typedef enum
-{
+typedef enum {
     DIRECTION_NORTH,
     DIRECTION_EAST,
     DIRECTION_SOUTH,
@@ -53,8 +63,9 @@ typedef enum
  * Displays a dungeon to the command line
  *
  * @param dungeon the dungeon we want to display
- * @param display_border 0=no border, any=draw_border on edge of dungeon
+ * @param display_border 0=no border, any=draw border on edge of dungeon
  */
 void dungeon_display(dungeon_data *dungeon, int display_border);
 
 // void dungeon_add(dungeon_data *connection, world_direction connection_direction);
+// void dungeon_delete(dungeon_data *dungeon);

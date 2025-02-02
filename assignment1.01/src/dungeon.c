@@ -1,6 +1,6 @@
-#include "dungeon.h"
+#include <stdio.h>
 
-#include "stdio.h"
+#include "dungeon.h"
 
 void dungeon_display(dungeon_data *dungeon, int display_border)
 {
@@ -21,9 +21,8 @@ void dungeon_display(dungeon_data *dungeon, int display_border)
         {
             printf("║");
             for (x = 1; x < DUNGEON_WIDTH - 1; x++)
-            {
-                printf("%c", char_map[dungeon->cells[x][y]]);
-            }
+                printf("%c", char_map[dungeon->cells[x][y].type]);
+
             printf("║\n");
         }
 
@@ -35,12 +34,11 @@ void dungeon_display(dungeon_data *dungeon, int display_border)
     }
     else
     {
-
         for (y = 0; y < DUNGEON_HEIGHT; y++)
         {
             for (x = 0; x < DUNGEON_WIDTH; x++)
             {
-                printf("%c", char_map[dungeon->cells[x][y]]);
+                printf("%c", char_map[dungeon->cells[x][y].type]);
             }
             printf("\n");
         }

@@ -1,4 +1,6 @@
 .vscode
+.fleet
+
 build
 bin
 tests

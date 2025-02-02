@@ -11,22 +11,22 @@
  */
 typedef enum
 {
-    ROOM_RECT = 1,
-    ROOM_ROUNDED_RECT = 2,
-    ROOM_ELIPSE = 4,
-} generator_room_shape;
+    SHAPE_RECT = 1,
+    SHAPE_ROUNDED_RECT = 2,
+    SHAPE_ELLIPSE = 4,
+} generator_shape;
 
 /**
  * Room data used for generating a room
  *
  * Shape must be an explicit value (non-ORed together), and corner_radius will be unused for all shapes except `ROOM_ROUNDED_RECT`
  *
- * In cases where `width` are even, `center_x` will be the cell on the right of the two cells that the true center lies on.
- * Similarly with an even `height`, `center_y` will be the bottom of the two cells that represent the true vertical center of the room.
+ * In cases where `width` are even, `center_x` will be the cell on the left of the two cells that the true center lies on.
+ * Similarly with an even `height`, `center_y` will be the top of the two cells that represent the true vertical center of the room.
  */
 typedef struct
 {
-    generator_room_shape shape;
+    generator_shape shape;
     uint16_t center_x;
     uint16_t center_y;
 
@@ -53,7 +53,7 @@ typedef struct
     uint16_t min_num_stairs;
     uint16_t max_num_stairs;
 
-    generator_room_shape possible_room_shapes;
+    generator_shape possible_room_shapes;
 } generator_parameters;
 
 /**
