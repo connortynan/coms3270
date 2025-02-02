@@ -1,17 +1,17 @@
 CC = gcc
-CFLAGS = -Wall -Werror -g -Iinclude
-LDFLAGS =
 
 SRC_DIR = src
 BIN_DIR = bin
+INCLUDE_DIR = include
 SRC = $(wildcard $(SRC_DIR)/*.c)
+INCLUDES = $(wildcard $(INCLUDE_DIR)/*.h)
 TARGET = $(BIN_DIR)/termune
 
 all: $(TARGET)
 
-$(TARGET): $(SRC)
+$(TARGET): $(SRC) $(INCLUDES)
 	mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) $(SRC) -o $(TARGET) $(LDFLAGS)
+	$(CC) -Wall -Werror -g -I$(INCLUDE_DIR) $(CFLAGS) $(SRC) -o $(TARGET) $(LDFLAGS)
 
 clean:
 	rm -rf $(BIN_DIR)

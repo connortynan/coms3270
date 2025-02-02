@@ -1,3 +1,9 @@
+## RECENT AT TOP
+
+2/1/25 - 3:00 PM:
+    - Implemented `packed_bool_arr` in `util.h`
+    - Modified `Makefile` to update on changes in `include/` directory
+
 1/31/25 - 1:30 PM:
     - Implemented `dungeon_display`
 
