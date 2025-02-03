@@ -3,72 +3,147 @@
 #include "generator.h"
 #include "util/bool_array.h"
 
-/**
- * @brief generates a `packed_bool_array` matrix of dim(width, height) which represents the shape defined by `room_data`
- *
- * @var result flattened 2D boolean array representing a (width x height) matrix where 1 means the shape fills that cell,
- *  where (0,0) of the matrix is (center_x-width/2, center_y-height/2)
- */
-int generator_shape_kernel(packed_bool_array *result, generator_room_data *room_data);
+#define GENERATOR_ROOM_BUCKET_SIZE 256
 
 /**
- * @brief Takes the given `room_data` that defines a room and fills all cells with the given `value` in the `dungeon` that are in the room
+ * @brief Fills all cells within the defined room in the dungeon with a specified value.
  *
- * The room is assumed to fit in the dungeon, values should be validated with `generator_room_fits` before given to this function, or else UB
+ * This function takes the given room data and writes the provided value to every cell within the defined room bounds
+ * in the dungeon. The room must fit within the dungeon's bounds, as this function does not perform boundary checks.
+ * Ensure that the room fits by validating with `generator_room_fits()` before calling this function to avoid undefined behavior.
  *
- * @var dungeon current dungeon that the room will be written to
- * @var room_data all information about the room that defines where it will go
- * @var value `dungeon_cell` that holds type and hardness (likely `ROOM` and `0`)
+ * @param dungeon Pointer to the current dungeon where the room will be written.
+ * @param room_data Pointer to the room data that defines the room's position and dimensions.
+ * @param value Pointer to a `dungeon_cell` struct containing the type and hardness for the room's cells.
+ *              Typically, this is `ROOM` with hardness `0`.
+ *
+ * @return Returns 0 on success, or an error code if the operation fails.
  */
-int generator_apply_room(dungeon_data *dungeon, generator_room_data *room_data, dungeon_cell *value);
+int generator_apply_room(dungeon_data *dungeon, const dungeon_room_data *room_data, const dungeon_cell *value);
 
 /**
- * @brief determines if a room will fit in the current dungeon.
- * Given the rules that the bounding boxes of all rooms must not touch at all (and must have one empty cell between them)
+ * @brief Reverts the changes applied by `generator_apply_room()`.
  *
- * @var dungeon current dungeon that the room is attempting to go into
- * @var room_data all information about the room that defines where it will go
+ * This function removes a previously applied room from the dungeon, restoring the dungeon's cells to their
+ * original state.
+ *
+ * @param dungeon Pointer to the current dungeon where the room was written.
+ * @param room_data Pointer to the room data that defines the bounds of the room to be undone.
+ *
+ * @return Returns 0 on success, or an error code if the operation fails.
  */
-int generator_room_fits(dungeon_data *dungeon, generator_room_data *room_data);
+int generator_undo_room(dungeon_data *dungeon, const dungeon_room_data *room_data);
 
-int generator_generate_dungeon(dungeon_data *dungeon, generator_parameters *params)
+/**
+ * @brief Checks if a given room fits within the bounds of the dungeon.
+ *
+ * This function verifies that the specified room defined by `room_data` fits completely within the dungeon's
+ * dimensions without overlapping or exceeding boundaries.
+ *
+ * @param dungeon Pointer to the current dungeon where the room is being checked.
+ * @param room_data Pointer to the room data defining the room's position and dimensions.
+ *
+ * @return Returns 1 if the room fits within the dungeon; otherwise, returns 0.
+ */
+int generator_room_fits(dungeon_data *dungeon, const dungeon_room_data *room_data);
+
+int _generator_place_rooms(dungeon_data *dungeon, const generator_parameters *params)
 {
-    int x, y;
+    int i;
 
+    dungeon_room_data bucket[GENERATOR_ROOM_BUCKET_SIZE] = {0};
+    dungeon_room_data room;
+
+    for (i = 0; i < GENERATOR_ROOM_BUCKET_SIZE; i++)
+    {
+        room.width = params->min_room_width + (rand() % (params->max_room_width - params->min_room_width));
+        room.height = params->min_room_height + (rand() % (params->max_room_height - params->min_room_height));
+
+        room.center_x = (room.width / 2 + 1) + (rand() % (DUNGEON_WIDTH - room.width - 1));
+        room.center_y = (room.height / 2 + 1) + (rand() % (DUNGEON_HEIGHT - room.height - 1));
+
+        bucket[i] = room;
+    }
+
+    uint16_t num_placed_rooms = 0;
+    size_t *placed_room_idxs = (size_t *)malloc(params->max_num_rooms * sizeof(*placed_room_idxs));
+
+    // prepare null-termination for rooms
+    static const dungeon_room_data end = {0, 0, 0, 0};
+    dungeon_cell room_cell = {ROOM, 0};
+    for (i = 0; i < params->max_num_rooms + 1; i++)
+    {
+        dungeon->rooms[i] = end;
+    }
+
+    size_t bucket_idx = 0;
+    while (num_placed_rooms < params->max_num_rooms)
+    {
+        dungeon_room_data *room_attempt = &bucket[bucket_idx];
+        if (generator_room_fits(dungeon, room_attempt))
+        {
+            generator_apply_room(dungeon, room_attempt, &room_cell);
+            dungeon->rooms[num_placed_rooms++] = *room_attempt;
+            placed_room_idxs[num_placed_rooms] = bucket_idx;
+        }
+        bucket_idx++;
+        if (bucket_idx >= GENERATOR_ROOM_BUCKET_SIZE)
+        {
+            if (num_placed_rooms >= params->min_num_rooms)
+            {
+                free(placed_room_idxs);
+                return 0;
+            }
+
+            generator_undo_room(dungeon, &dungeon->rooms[--num_placed_rooms]);
+
+            if (num_placed_rooms <= 0)
+            {
+                // The bucket was impossible, we checked all permutations :(
+                free(placed_room_idxs);
+                return 1;
+            }
+            bucket_idx = placed_room_idxs[num_placed_rooms] + 1;
+        }
+    }
+    free(placed_room_idxs);
+    return 0;
+}
+
+int generator_generate_dungeon(dungeon_data *dungeon, const generator_parameters *params)
+{
+    if (!params)
+    {
+        fprintf(stderr, "Error: generator parameters cannot be NULL\n");
+        return 1;
+    }
+
+    dungeon->north = dungeon->east = dungeon->south = dungeon->west = dungeon->up = dungeon->down = NULL;
+
+    uint16_t x, y;
+    static const dungeon_cell rock = {ROCK, 255};
     for (y = 0; y < DUNGEON_HEIGHT; y++)
     {
         for (x = 0; x < DUNGEON_WIDTH; x++)
         {
-            dungeon->cells[x][y].hardness = 0;
-            dungeon->cells[x][y].type = 0;
+            dungeon->cells[x][y] = rock;
         }
     }
 
-    generator_room_data rounded_rect_data = {
-        .center_x = 40,
-        .center_y = 10,
-        .corner_radius = 4,
-        .width = 75,
-        .height = 20,
-        .shape = SHAPE_ELLIPSE,
-    };
-    dungeon_cell room_cell = {ROOM, 0};
+    dungeon->rooms = (dungeon_room_data *)malloc((params->max_num_rooms + 1) * sizeof(dungeon_room_data));
+    if (!dungeon->rooms)
+        return 1;
 
-    generator_apply_room(dungeon, &rounded_rect_data, &room_cell);
-
-    dungeon->cells[40][10].type = CORRIDOR;
+    while (_generator_place_rooms(dungeon, params))
+        ;
 
     return 0;
 }
 
-int generator_apply_room(dungeon_data *dungeon, generator_room_data *room_data, dungeon_cell *value)
+int generator_apply_room(dungeon_data *dungeon, const dungeon_room_data *room_data, const dungeon_cell *value)
 {
-    packed_bool_array kernel;
-
-    generator_shape_kernel(&kernel, room_data);
-
-    uint16_t x = room_data->center_x - room_data->width / 2;
-    uint16_t y = room_data->center_y - room_data->height / 2;
+    const uint16_t x = room_data->center_x - room_data->width / 2;
+    const uint16_t y = room_data->center_y - room_data->height / 2;
 
     uint16_t dx, dy;
 
@@ -76,81 +151,69 @@ int generator_apply_room(dungeon_data *dungeon, generator_room_data *room_data, 
     {
         for (dy = 0; dy < room_data->height; dy++)
         {
-            if (bool_array_get(&kernel, dx + (dy * room_data->width)))
-                dungeon->cells[x + dx][y + dy] = *value;
+            dungeon->cells[x + dx][y + dy] = *value;
         }
     }
 
     return 0;
 }
 
-void _generator_shape_rounded_rect(packed_bool_array *kernel, generator_room_data *room_data)
+int generator_undo_room(dungeon_data *dungeon, const dungeon_room_data *room_data)
 {
-    int _radius = room_data->corner_radius;
+    const uint16_t x = room_data->center_x - room_data->width / 2;
+    const uint16_t y = room_data->center_y - room_data->height / 2;
+
     uint16_t dx, dy;
-    uint16_t w = room_data->width;
-    uint16_t h = room_data->height;
 
-    _radius = (_radius > w) ? w : _radius; // min(w, _radius)
-    _radius = (_radius > h) ? h : _radius; // min(h, _radius)
+    dungeon_cell default_value = {
+        .type = ROCK,
+        .hardness = 0,
+    };
 
-    for (dy = 0; dy <= _radius; dy++)
+    for (dx = 0; dx < room_data->width; dx++)
     {
-        for (dx = 0; dx <= _radius; dx++)
+        for (dy = 0; dy < room_data->height; dy++)
         {
-            if (dx * dx + dy * dy > _radius * _radius) // Outside shape
-            {
-                bool_array_set(kernel, (_radius - dx) + (_radius - dy) * w, 0);                 // top left
-                bool_array_set(kernel, (_radius - dx) + (h - _radius + dy - 1) * w, 0);         // bottom left
-                bool_array_set(kernel, (w - _radius + dx - 1) + (_radius - dy) * w, 0);         // top right
-                bool_array_set(kernel, (w - _radius + dx - 1) + (h - _radius + dy - 1) * w, 0); // bottom right
-            }
+            dungeon->cells[x + dx][y + dy] = default_value;
         }
-    }
-}
-
-void _generator_shape_ellipse(packed_bool_array *kernel, generator_room_data *room_data)
-{
-    uint16_t dx, dy;
-    uint16_t w = room_data->width;
-    uint16_t h = room_data->height;
-    uint16_t xr = (w + 1) / 2;
-    uint16_t yr = (h + 1) / 2;
-
-    for (dy = 0; dy <= yr; dy++)
-    {
-        for (dx = 0; dx <= xr; dx++)
-        {
-            if (4 * (dx * dx * h * h + dy * dy * w * w) > (w * w * h * h)) // Outside ellipse
-            {
-                bool_array_set(kernel, (xr - dx) + (yr - dy) * w, 0);         // top left
-                bool_array_set(kernel, (xr - dx) + (yr + dy - 1) * w, 0);     // bottom left
-                bool_array_set(kernel, (xr + dx - 1) + (yr - dy) * w, 0);     // top right
-                bool_array_set(kernel, (xr + dx - 1) + (yr + dy - 1) * w, 0); // bottom right
-            }
-        }
-    }
-}
-
-int generator_shape_kernel(packed_bool_array *result, generator_room_data *room_data)
-{
-    // Assume everything is part of the shape, then remove things outside
-
-    bool_array_reserve(result, room_data->width * room_data->height);
-    bool_array_fill(result, 1);
-
-    switch (room_data->shape)
-    {
-    case SHAPE_RECT:
-        // Rectangle is already filled
-        break;
-    case SHAPE_ROUNDED_RECT:
-        _generator_shape_rounded_rect(result, room_data);
-        break;
-    case SHAPE_ELLIPSE:
-        _generator_shape_ellipse(result, room_data);
-        break;
     }
 
     return 0;
+}
+
+int generator_room_fits(dungeon_data *dungeon, const dungeon_room_data *room_data)
+{
+    int i;
+
+    const int new_min_x = room_data->center_x - room_data->width / 2;
+    const int new_max_x = room_data->center_x + (room_data->width - 1) / 2;
+    const int new_min_y = room_data->center_y - room_data->height / 2;
+    const int new_max_y = room_data->center_y + (room_data->height - 1) / 2;
+
+    if (new_min_x < 1 || new_max_x >= DUNGEON_WIDTH - 1 ||
+        new_min_y < 1 || new_max_y >= DUNGEON_HEIGHT - 1)
+    {
+        return 0;
+    }
+
+    // Check against all existing rooms for overlap or adjacency
+    for (i = 0; dungeon->rooms[i].center_x; i++)
+    {
+        dungeon_room_data *existing_room = &dungeon->rooms[i];
+
+        const int existing_min_x = existing_room->center_x - existing_room->width / 2;
+        const int existing_max_x = existing_room->center_x + (existing_room->width - 1) / 2;
+        const int existing_min_y = existing_room->center_y - existing_room->height / 2;
+        const int existing_max_y = existing_room->center_y + (existing_room->height - 1) / 2;
+
+        if (new_max_x + 1 >= existing_min_x &&
+            new_min_x - 1 <= existing_max_x &&
+            new_max_y + 1 >= existing_min_y &&
+            new_min_y - 1 <= existing_max_y)
+        {
+            return 0;
+        }
+    }
+
+    return 1;
 }

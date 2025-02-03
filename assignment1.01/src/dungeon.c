@@ -2,7 +2,7 @@
 
 #include "dungeon.h"
 
-void dungeon_display(dungeon_data *dungeon, int display_border)
+void dungeon_display(const dungeon_data *dungeon, const int display_border)
 {
     int x, y, i;
 

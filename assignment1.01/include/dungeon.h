@@ -7,7 +7,8 @@
  *
  * @brief Enumerator of all static cell types, each with special properties
  */
-typedef enum {
+typedef enum
+{
     ROCK,      /**< Solid walls, cannot be traversed over */
     ROOM,      /**< Room floor */
     CORRIDOR,  /**< Corridor floor, which connects rooms */
@@ -23,10 +24,26 @@ typedef enum {
  * Each dungeon cell has a type defined by `dungeon_cell_t` and an associated hardness value.
  * Hardness can influence traversal difficulty for generating corridors.
  */
-typedef struct {
+typedef struct
+{
     dungeon_cell_t type;
     uint8_t hardness;
 } dungeon_cell;
+
+/**
+ * Room data defining rectangular rooms in the dungeon
+ *
+ * In cases where `width` are even, `center_x` will be the cell on the left of the two cells that the true center lies on.
+ * Similarly with an even `height`, `center_y` will be the top of the two cells that represent the true vertical center of the room.
+ */
+typedef struct
+{
+    uint16_t center_x;
+    uint16_t center_y;
+
+    uint16_t width;
+    uint16_t height;
+} dungeon_room_data;
 
 /**
  * @struct dungeon_data
@@ -39,8 +56,10 @@ typedef struct {
  * @var up, down
  * Pointers to dungeons above and below, respectively.
  */
-typedef struct dungeon_data {
+typedef struct dungeon_data
+{
     dungeon_cell cells[DUNGEON_WIDTH][DUNGEON_HEIGHT]; /**< Dungeon cell data. Indexed by [x][y] with [0][0] being the top-left corner */
+    dungeon_room_data *rooms;                          /**< Array of rooms that are in the dungeon (null-terminated) */
 
     struct dungeon_data *north; /**< Pointer to the northern dungeon. */
     struct dungeon_data *east;  /**< Pointer to the eastern dungeon. */
@@ -50,7 +69,8 @@ typedef struct dungeon_data {
     struct dungeon_data *down;  /**< Pointer to the dungeon below. */
 } dungeon_data;
 
-typedef enum {
+typedef enum
+{
     DIRECTION_NORTH,
     DIRECTION_EAST,
     DIRECTION_SOUTH,
@@ -65,7 +85,7 @@ typedef enum {
  * @param dungeon the dungeon we want to display
  * @param display_border 0=no border, any=draw border on edge of dungeon
  */
-void dungeon_display(dungeon_data *dungeon, int display_border);
+void dungeon_display(const dungeon_data *dungeon, const int display_border);
 
 // void dungeon_add(dungeon_data *connection, world_direction connection_direction);
 // void dungeon_delete(dungeon_data *dungeon);
