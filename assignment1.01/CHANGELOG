@@ -1,5 +1,11 @@
 ## RECENT AT TOP
 
+2/3/25 - 11:00 PM:
+    - Implemented `noise_perlin` for use with rock hardnesss 
+
+2/3/25 - 2:00 PM:
+    - Implemented `_generator_place_rooms` to solve room placements
+
 2/1/25 - 3:00 PM:
     - Implemented `packed_bool_arr` in `util.h`
     - Modified `Makefile` to update on changes in `include/` directory
