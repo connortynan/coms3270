@@ -196,7 +196,7 @@ int generator_generate_dungeon(dungeon_data *dungeon, const generator_parameters
 
     dungeon->north = dungeon->east = dungeon->south = dungeon->west = dungeon->up = dungeon->down = NULL;
 
-    uint16_t x, y;
+    uint16_t x, y, i;
     static const dungeon_cell rock = {ROCK, 255};
     for (y = 0; y < DUNGEON_HEIGHT; y++)
     {
@@ -220,6 +220,20 @@ int generator_generate_dungeon(dungeon_data *dungeon, const generator_parameters
     generator_set_rock_hardness(dungeon, params);
 
     _generator_connect_rooms(dungeon);
+
+    uint16_t num_stairs = params->min_num_stairs + (rand() % (params->max_num_stairs - params->min_num_stairs + 1));
+    int stair_direction = rand() & 1; // 0=up, 1=down
+    for (i = 0; i < num_stairs; i++)
+    {
+        do
+        {
+            x = rand() % DUNGEON_WIDTH;
+            y = rand() % DUNGEON_HEIGHT;
+        } while (!(dungeon->cells[x][y].type & 0b110)); // ROOM or CORRIDOR
+        dungeon->cells[x][y].type = stair_direction ? STAIR_DOWN : STAIR_UP;
+        dungeon->cells[x][y].hardness = 0;
+        stair_direction ^= 1;
+    }
 
     return 0;
 }

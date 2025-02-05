@@ -1,5 +1,7 @@
 ## RECENT AT TOP
 
+2/5/25 - 3:00 PM:
+    - Added stairs
 
 2/5/25 - 2:00 PM:
     - Fixed all memory leaks detected by valgrind

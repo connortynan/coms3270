@@ -23,8 +23,8 @@ int main(int argc, char const *argv[])
         .min_room_height = 4,
         .max_room_height = 10,
 
-        .min_num_stairs = 0,
-        .max_num_stairs = 0,
+        .min_num_stairs = 2,
+        .max_num_stairs = 4,
 
         .min_rock_hardness = 128,
         .max_rock_hardness = 192,
