@@ -7,7 +7,7 @@
 /**
  * Parameters to generate a dungeon to make dungeon generation paramters modifiable easier
  */
-typedef struct
+typedef struct generator_parameters
 {
     uint16_t min_room_width;
     uint16_t max_room_width;
@@ -20,6 +20,11 @@ typedef struct
 
     uint16_t min_num_stairs;
     uint16_t max_num_stairs;
+
+    uint8_t min_rock_hardness;
+    uint8_t max_rock_hardness;
+
+    float rock_hardness_noise_amount;
 } generator_parameters;
 
 /**

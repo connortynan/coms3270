@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdlib.h>
+#include <string.h>
 
 static inline float util_lerp(float t, float a, float b)
 {
@@ -10,6 +11,17 @@ static inline float util_lerp(float t, float a, float b)
 static inline float util_dot(const float ax, const float ay, const float bx, const float by)
 {
     return ax * bx + ay * by;
+}
+
+static void util_swap_elements(void *a, void *b, size_t element_size)
+{
+    void *temp = malloc(element_size);
+    if (temp == NULL)
+        return;
+    memcpy(temp, a, element_size);
+    memcpy(a, b, element_size);
+    memcpy(b, temp, element_size);
+    free(temp);
 }
 
 /**

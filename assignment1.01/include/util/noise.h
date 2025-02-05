@@ -3,9 +3,9 @@
 #include <math.h>
 #include <stdint.h>
 #include <string.h>
-#include "util/util_math.h"
+#include "util/util.h"
 
-#define NOISE_PERMUTATION_TABLE_LEN 256
+#define NOISE_PERMUTATION_TABLE_LEN 1024
 
 static int noise_permutation[NOISE_PERMUTATION_TABLE_LEN * 2];
 

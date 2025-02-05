@@ -25,11 +25,18 @@ int main(int argc, char const *argv[])
 
         .min_num_stairs = 0,
         .max_num_stairs = 0,
+
+        .min_rock_hardness = 196,
+        .max_rock_hardness = 234,
+
+        .rock_hardness_noise_amount = 10.f,
     };
 
     generator_generate_dungeon(&dungeon, &params);
 
-    dungeon_display(&dungeon, 1);
+    dungeon_display(&dungeon, 0);
+
+    dungeon_destroy(&dungeon);
 
     return 0;
 }
