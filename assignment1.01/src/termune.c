@@ -30,7 +30,7 @@ int main(int argc, char const *argv[])
         .max_rock_hardness = 192,
 
         .rock_hardness_smoothness = 8,
-        .rock_hardness_noise_amount = 100.f,
+        .rock_hardness_noise_amount = 10000.f,
     };
 
     generator_generate_dungeon(&dungeon, &params);

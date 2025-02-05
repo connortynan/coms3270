@@ -180,7 +180,7 @@ int _generator_connect_rooms(dungeon_data *dungeon)
                 cell->hardness = 0;
             }
         }
-        free(path);
+        vector_destroy(path);
     }
     free(weights);
     return 0;
@@ -358,8 +358,8 @@ int generator_set_rock_hardness(dungeon_data *dungeon, const generator_parameter
         gaussian_blur(hardness, DUNGEON_WIDTH, DUNGEON_HEIGHT);
 
     // Add perlin noise to hardness
-    float x_off = rand();
-    float y_off = rand();
+    float x_off = ((float)rand() / (float)INT32_MAX) * NOISE_PERMUTATION_TABLE_LEN;
+    float y_off = ((float)rand() / (float)INT32_MAX) * NOISE_PERMUTATION_TABLE_LEN;
 
     if (params->rock_hardness_noise_amount > 0.f)
     {
@@ -369,7 +369,7 @@ int generator_set_rock_hardness(dungeon_data *dungeon, const generator_parameter
         {
             for (x = 0; x < DUNGEON_WIDTH; x++)
             {
-                noisy = (uint8_t)(hardness[i] + layered_noise_perlin(x + x_off, 2.f * y + y_off, params->rock_hardness_noise_amount, 1000.f, 4, 0.5f, 2.f));
+                noisy = (uint8_t)(hardness[i] + layered_noise_perlin(x + x_off, 2.f * y + y_off, params->rock_hardness_noise_amount, 0.01f, 4, 0.8f, 2.f));
                 hardness[i++] = VALUE_CLAMP(noisy, 0, 255);
             }
         }

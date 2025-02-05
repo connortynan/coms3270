@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <assert.h>
 
 #include "util/vector.h"
 #include "util/heap.h"
@@ -21,9 +22,9 @@ typedef struct vec2_u16
  */
 typedef struct pathing_node
 {
-    vec2_u16 pos;              /**< (x, y) coordinate of the node in the grid */
-    uint64_t cost;             /**< tentative distance of the node */
-    struct pathing_node *prev; /** previous noe in the current path */
+    vec2_u16 pos;    /**< (x, y) coordinate of the node in the grid */
+    uint64_t cost;   /**< tentative distance of the node */
+    size_t prev_idx; /** index to previous node in the current path */
 } pathing_node;
 
 /**
@@ -102,11 +103,12 @@ pathing_solve(
             n->pos.x = x;
             n->pos.y = y;
             n->cost = UINT32_MAX;
-            n->prev = NULL;
+            n->prev_idx = SIZE_MAX;
         }
     }
 
     pathing_node *start_node = &nodes[start_x + start_y * width];
+    pathing_node curr_node;
     start_node->cost = 0;
 
     heap *q = heap_init(0, sizeof(pathing_node), node_compare);
@@ -124,17 +126,18 @@ pathing_solve(
     while (q->_vec->size > 0)
     {
         // Get the node with the smallest tentative distance
-        pathing_node *curr = (pathing_node *)heap_poll(q);
+        heap_poll(q, &curr_node);
 
         // If we reached the end, reconstruct the path
-        if (curr->pos.x == end_x && curr->pos.y == end_y)
+        if (curr_node.pos.x == end_x && curr_node.pos.y == end_y)
         {
-            pathing_node *n = curr;
-            while (n != NULL)
+            pathing_node *n = &curr_node;
+            while (1)
             {
-                vec2_u16 v = {n->pos.x, n->pos.y};
-                vector_push_back(path, &v);
-                n = n->prev;
+                vector_push_back(path, &n->pos);
+                if (n->prev_idx == SIZE_MAX)
+                    break;
+                n = &nodes[n->prev_idx];
             }
 
             // Reverse the path since we built it backwards
@@ -147,7 +150,6 @@ pathing_solve(
                 *b = temp;
             }
 
-            free(curr);
             heap_destroy(q);
             free(nodes);
 
@@ -157,22 +159,21 @@ pathing_solve(
         // Explore neighbors
         for (int i = 0; i < 4; ++i)
         {
-            uint16_t nx = curr->pos.x + moves[i][0];
-            uint16_t ny = curr->pos.y + moves[i][1];
+            uint16_t nx = curr_node.pos.x + moves[i][0];
+            uint16_t ny = curr_node.pos.y + moves[i][1];
 
             if (WITHIN_BOUNDS(nx, ny, width, height))
             {
-                uint32_t new_cost = curr->cost + weights[ny * width + nx];
+                uint32_t new_cost = curr_node.cost + weights[ny * width + nx];
                 pathing_node *nbor = &nodes[ny * width + nx];
                 if (new_cost < nbor->cost)
                 {
                     nbor->cost = new_cost;
-                    nbor->prev = curr;
+                    nbor->prev_idx = curr_node.pos.x + width * curr_node.pos.y;
                     heap_insert(q, nbor);
                 }
             }
         }
-        free(curr);
     }
 
     // No path found

@@ -36,9 +36,9 @@ static inline void noise_hashed_vector(int v, float *x, float *y)
 static inline float noise_perlin(float x, float y)
 {
     // Take x and y modulo the length of the permutation table (dealing with negatives)
-    int X = (int)floorf(x) % NOISE_PERMUTATION_TABLE_LEN;
+    int X = (int)fmod(x, NOISE_PERMUTATION_TABLE_LEN);
     X = (X + NOISE_PERMUTATION_TABLE_LEN) % NOISE_PERMUTATION_TABLE_LEN;
-    int Y = (int)floorf(y) % NOISE_PERMUTATION_TABLE_LEN;
+    int Y = (int)fmod(y, NOISE_PERMUTATION_TABLE_LEN);
     Y = (Y + NOISE_PERMUTATION_TABLE_LEN) % NOISE_PERMUTATION_TABLE_LEN;
 
     x -= floorf(x);

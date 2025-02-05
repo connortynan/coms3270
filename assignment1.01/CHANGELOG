@@ -1,5 +1,9 @@
 ## RECENT AT TOP
 
+
+2/5/25 - 2:00 PM:
+    - Fixed all memory leaks detected by valgrind
+
 2/4/25 - 11:00 PM:
     - Played with perlin noise for varied paths and fixed a few memory leaks
 

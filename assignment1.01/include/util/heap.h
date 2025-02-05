@@ -158,18 +158,15 @@ static inline void *heap_peek(const heap *h)
  * @brief Extracts and removes the minimum element from the heap.
  *
  * @param h Pointer to the heap
- * @return Pointer to the removed element, or NULL if the heap is empty
+ * @param result Pointer that the minimum element will be written to.
+ * @return 0 if successfully polled, or 1 on error or if heap is empty
  */
-static inline void *heap_poll(heap *h)
+static inline int heap_poll(heap *h, void *result)
 {
     if (!h || h->_vec->size == 0)
-        return NULL;
+        return 1;
 
-    void *min_elem = malloc(h->_vec->_elem_size);
-    if (!min_elem)
-        return NULL;
-
-    memcpy(min_elem, vector_at(h->_vec, 0), h->_vec->_elem_size);
+    memcpy(result, vector_at(h->_vec, 0), h->_vec->_elem_size);
 
     // Move the last element to the root and heapify down
     void *last_elem = vector_at(h->_vec, h->_vec->size - 1);
@@ -177,5 +174,5 @@ static inline void *heap_poll(heap *h)
     h->_vec->size--;
 
     _heapify_down(h, 0);
-    return min_elem;
+    return 0;
 }
