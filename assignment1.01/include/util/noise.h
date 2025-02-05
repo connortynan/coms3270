@@ -35,6 +35,7 @@ static inline void noise_hashed_vector(int v, float *x, float *y)
 
 static inline float noise_perlin(float x, float y)
 {
+    // Take x and y modulo the length of the permutation table (dealing with negatives)
     int X = (int)floorf(x) % NOISE_PERMUTATION_TABLE_LEN;
     X = (X + NOISE_PERMUTATION_TABLE_LEN) % NOISE_PERMUTATION_TABLE_LEN;
     int Y = (int)floorf(y) % NOISE_PERMUTATION_TABLE_LEN;
@@ -68,4 +69,20 @@ static inline float noise_perlin(float x, float y)
     return util_lerp(u,
                      util_lerp(v, t00, t01),
                      util_lerp(v, t10, t11));
+}
+
+static inline float layered_noise_perlin(
+    float x, float y,
+    float amplitude, float frequency,
+    int octaves, float persistence, float lacunarity)
+{
+    float result = 0.f;
+    int i;
+    for (i = 0; i < octaves; i++)
+    {
+        result += amplitude * noise_perlin(x * frequency, y * frequency);
+        amplitude *= persistence;
+        frequency *= lacunarity;
+    }
+    return result;
 }

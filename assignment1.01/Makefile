@@ -10,7 +10,7 @@ TARGET = $(BIN_DIR)/termune
 CFLAGS = -Wall -g -I$(INCLUDE_DIR)
 
 ifeq ($(DEBUG), 1)
-    CFLAGS += -DTERMUNE_DEV_DEBUG
+    CFLAGS += -DDEBUG_DEV_FLAGS
 endif
 
 all: $(TARGET)

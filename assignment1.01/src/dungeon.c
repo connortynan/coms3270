@@ -3,6 +3,10 @@
 
 #include "dungeon.h"
 
+#ifdef DEBUG_DEV_FLAGS
+#define DEBUG_GRADIENT_VALUES
+#endif
+
 int dungeon_destroy(dungeon_data *dungeon)
 {
     if (dungeon->north)
@@ -35,16 +39,21 @@ void dungeon_display(const dungeon_data *dungeon, const int display_border)
     {
         for (x = 0; x < DUNGEON_WIDTH; x++)
         {
-#ifdef TERMUNE_DEV_DEBUG
+#ifdef DEBUG_DEV_FLAGS
             if (dungeon->cells[x][y].type == DEBUG_SHOW_HARDNESS)
             {
+#ifdef DEBUG_HEX_VALUES
                 // Copy hex representation to temporary string, and pull first character to display
                 char displayed_hardness[8];
                 sprintf(displayed_hardness, "%x", dungeon->cells[x][y].hardness % 16);
                 output[x][y] = displayed_hardness[0];
+#else // DEBUG_GRADIENT_VALUES
+                static const char ascii_gradient[] = {':', '-', '=', '+', '*', '%', '@', '"'};
+                output[x][y] = ascii_gradient[dungeon->cells[x][y].hardness / 32];
+#endif
             }
             else
-#endif // TERMUNE_DEV_DEBUG
+#endif // DEBUG_DEV_FLAG
                 output[x][y] = char_map[dungeon->cells[x][y].type];
         }
     }

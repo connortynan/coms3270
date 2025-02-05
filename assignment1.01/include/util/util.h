@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define VALUE_CLAMP(x, min, max) (((x) < (min)) ? (min) : (((x) > (max)) ? (max) : (x)))
+
 static inline float util_lerp(float t, float a, float b)
 {
     return a + (b - a) * t;
@@ -13,7 +15,7 @@ static inline float util_dot(const float ax, const float ay, const float bx, con
     return ax * bx + ay * by;
 }
 
-static void util_swap_elements(void *a, void *b, size_t element_size)
+static inline void util_swap_elements(void *a, void *b, size_t element_size)
 {
     void *temp = malloc(element_size);
     if (temp == NULL)

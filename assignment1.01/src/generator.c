@@ -3,6 +3,8 @@
 #include "generator.h"
 #include "util/bool_array.h"
 #include "util/pathing.h"
+#include "util/img_proc.h"
+#include "util/noise.h"
 
 #define GENERATOR_ROOM_BUCKET_SIZE 256
 
@@ -98,7 +100,7 @@ int _generator_place_rooms(dungeon_data *dungeon, const generator_parameters *pa
         bucket[i] = room;
     }
 
-    uint16_t max_rooms = params->min_num_rooms + (rand() % (params->max_num_rooms - params->min_num_rooms));
+    uint16_t max_rooms = params->min_num_rooms + (rand() % (params->max_num_rooms - params->min_num_rooms + 1));
 
     dungeon->num_rooms = 0;
     size_t *placed_room_idxs = (size_t *)malloc(params->max_num_rooms * sizeof(*placed_room_idxs));
@@ -156,12 +158,13 @@ int _generator_connect_rooms(dungeon_data *dungeon)
         }
     }
 
-    for (i = 0; i < dungeon->num_rooms - 1; i++)
+    for (i = 0; i < dungeon->num_rooms; i++)
     {
+        uint16_t next_idx = (i + 1) % dungeon->num_rooms;
         ax = dungeon->rooms[i].center_x;
         ay = dungeon->rooms[i].center_y;
-        bx = dungeon->rooms[i + 1].center_x;
-        by = dungeon->rooms[i + 1].center_y;
+        bx = dungeon->rooms[next_idx].center_x;
+        by = dungeon->rooms[next_idx].center_y;
 
         path = pathing_solve(weights, DUNGEON_WIDTH, DUNGEON_HEIGHT, ax, ay, bx, by);
         if (!path)
@@ -177,7 +180,9 @@ int _generator_connect_rooms(dungeon_data *dungeon)
                 cell->hardness = 0;
             }
         }
+        free(path);
     }
+    free(weights);
     return 0;
 }
 
@@ -329,7 +334,49 @@ int generator_set_rock_hardness(dungeon_data *dungeon, const generator_parameter
         room_hardnesses[i] = params->min_rock_hardness + (rand() % (params->max_rock_hardness - params->min_rock_hardness + 1));
     }
 
+    uint8_t *hardness = (uint8_t *)malloc(DUNGEON_WIDTH * DUNGEON_HEIGHT * sizeof(*hardness));
+    if (!hardness)
+    {
+        free(room_hardnesses);
+        return 1;
+    }
     int x, y;
+
+    i = 0;
+    // Set rock hardness based on rooms
+    for (y = 0; y < DUNGEON_HEIGHT; y++)
+    {
+        for (x = 0; x < DUNGEON_WIDTH; x++)
+        {
+            hardness[i++] = room_hardnesses[_generator_get_nearest_room(dungeon, x, y)];
+        }
+    }
+    free(room_hardnesses);
+
+    // Blur hardness based on parameter
+    for (i = 0; i < params->rock_hardness_smoothness; i++)
+        gaussian_blur(hardness, DUNGEON_WIDTH, DUNGEON_HEIGHT);
+
+    // Add perlin noise to hardness
+    float x_off = rand();
+    float y_off = rand();
+
+    if (params->rock_hardness_noise_amount > 0.f)
+    {
+        i = 0;
+        uint8_t noisy;
+        for (y = 0; y < DUNGEON_HEIGHT; y++)
+        {
+            for (x = 0; x < DUNGEON_WIDTH; x++)
+            {
+                noisy = (uint8_t)(hardness[i] + layered_noise_perlin(x + x_off, 2.f * y + y_off, params->rock_hardness_noise_amount, 1000.f, 4, 0.5f, 2.f));
+                hardness[i++] = VALUE_CLAMP(noisy, 0, 255);
+            }
+        }
+    }
+
+    // Write hardness to rocks and set non-rocks to 0 hardness
+    i = 0;
     for (y = 0; y < DUNGEON_HEIGHT; y++)
     {
         for (x = 0; x < DUNGEON_WIDTH; x++)
@@ -342,18 +389,18 @@ int generator_set_rock_hardness(dungeon_data *dungeon, const generator_parameter
                 }
                 else
                 {
-#ifdef TERMUNE_DEV_DEBUG
+#ifdef DEBUG_DEV_FLAGS
                     dungeon->cells[x][y].type = DEBUG_SHOW_HARDNESS;
-                    dungeon->cells[x][y].hardness = _generator_get_nearest_room(dungeon, x, y);
-
-#else
-                    dungeon->cells[x][y].hardness = room_hardnesses[_generator_get_nearest_room(dungeon, x, y)];
-#endif // TERMUNE_DEV_DEBUG
+#endif // DEBUG_DEV_FLAGS
+                    dungeon->cells[x][y].hardness = hardness[i++];
                 }
+            }
+            else
+            {
+                dungeon->cells[x][y].hardness = 0;
             }
         }
     }
-    free(room_hardnesses);
-
+    free(hardness);
     return 0;
 }

@@ -147,6 +147,7 @@ pathing_solve(
                 *b = temp;
             }
 
+            free(curr);
             heap_destroy(q);
             free(nodes);
 
@@ -171,6 +172,7 @@ pathing_solve(
                 }
             }
         }
+        free(curr);
     }
 
     // No path found

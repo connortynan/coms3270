@@ -24,6 +24,7 @@ typedef struct generator_parameters
     uint8_t min_rock_hardness;
     uint8_t max_rock_hardness;
 
+    uint8_t rock_hardness_smoothness;
     float rock_hardness_noise_amount;
 } generator_parameters;
 

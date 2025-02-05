@@ -1,7 +1,10 @@
 ## RECENT AT TOP
 
-2/5/25 - 7:00 PM:
-    - Implemented path finding to write corridor cells
+2/4/25 - 11:00 PM:
+    - Played with perlin noise for varied paths and fixed a few memory leaks
+
+2/4/25 - 7:00 PM:
+    - Implemented path finding to write corridor cells with `_generator_place_rooms`
 
 2/4/25 - 3:00 PM:
     - Implemented `vector.h`, `heap.h` and `pathing.h` for corridor generation
