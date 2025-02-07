@@ -1,0 +1,36 @@
+# assignment0
+## Connor Tynan (ctynan)
+
+Given a board size and a list of words as command line arguments, generates a word search with all words and prints it to the terminal with a word list. 
+
+This generator implements backtracking, so any word list that has a possible solution for a given board size will sucessfully find a solution (albeit very slow for large and dense boards).
+
+---
+
+Words can be placed in four directions: (↗ diagonal up,  → rightward, ↘ diagonal down, ↓ downward).
+
+It is recommended to use all lowercase for the given word list, as the randomly filled characters are all lower case.
+
+---
+
+The first argument is the board size, which must be a positive integer less than 20, as per the project specification.
+
+The second and onwards arguments are the word lists, which are seperated by spaces.
+
+---
+
+Build:
+```
+# navigate to source directory
+make
+```
+
+Usage:
+```
+bin/wordsearchgen <board_size> [word1, word2, ...] 
+```
+
+Uninstall:
+```
+make clean
+```
