@@ -14,9 +14,6 @@ typedef enum dungeon_cell_t
     CORRIDOR = 2,   /**< Corridor floor, which connects rooms */
     STAIR_UP = 3,   /**< Upwards staircase which takes you to the dungeon connected above */
     STAIR_DOWN = 4, /**< Downwards staircase which takes you to the dungeon connected below */
-#ifdef DEBUG_DEV_FLAGS
-    DEBUG_SHOW_HARDNESS = 10 /**< For debug use only, shows the hardness value of cells as hex (mod 16) */
-#endif                       // TERMUNE_DEV_DEBUG
 } dungeon_cell_t;
 
 /**

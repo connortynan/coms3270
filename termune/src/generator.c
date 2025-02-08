@@ -229,7 +229,7 @@ int generator_generate_dungeon(dungeon_data *dungeon, const generator_parameters
         {
             x = rand() % DUNGEON_WIDTH;
             y = rand() % DUNGEON_HEIGHT;
-        } while (!(dungeon->cells[x][y].type & 0b110)); // ROOM or CORRIDOR
+        } while (!(dungeon->cells[x][y].type & ROOM)); // ROOM
         dungeon->cells[x][y].type = stair_direction ? STAIR_DOWN : STAIR_UP;
         dungeon->cells[x][y].hardness = 0;
         stair_direction ^= 1;
@@ -318,9 +318,10 @@ int generator_room_fits(dungeon_data *dungeon, const dungeon_room_data *room_dat
 
 int _generator_get_nearest_room(dungeon_data *dungeon, uint16_t x, uint16_t y)
 {
-    int closest_room_idx = -1;
+    int closest_room_idx = 0;
     int64_t min_dist_sq = INT64_MAX;
-    int i, dx, dy, dist_sq;
+    int64_t dist_sq;
+    int i, dx, dy;
     for (i = 0; i < dungeon->num_rooms; i++)
     {
         dx = dungeon->rooms[i].center_x - x;
@@ -403,16 +404,14 @@ int generator_set_rock_hardness(dungeon_data *dungeon, const generator_parameter
                 }
                 else
                 {
-#ifdef DEBUG_DEV_FLAGS
-                    dungeon->cells[x][y].type = DEBUG_SHOW_HARDNESS;
-#endif // DEBUG_DEV_FLAGS
-                    dungeon->cells[x][y].hardness = hardness[i++];
+                    dungeon->cells[x][y].hardness = hardness[i];
                 }
             }
             else
             {
                 dungeon->cells[x][y].hardness = 0;
             }
+            i++;
         }
     }
     free(hardness);
