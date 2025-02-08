@@ -29,6 +29,5 @@ tar: clean
 		echo "Please provide a version by running: make tar version=<version_number>"; \
 		exit 1; \
 	fi
-	@mkdir -p $(TAR_DIR)
-	@tar -czf $(TAR_DIR)/tynan_connor.assignment-$(version).tar.gz -C $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))) .
-	@echo "Tarball created at $(TAR_DIR)/tynan_connor.assignment-$(version).tar.gz"
+	mkdir -p $(TAR_DIR)
+	tar -czf $(TAR_DIR)/tynan_connor.assignment-$(version).tar.gz -C $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))) .

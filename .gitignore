@@ -3,6 +3,5 @@
 
 build
 bin
-tests
 
 *.tar.gz
