@@ -72,14 +72,11 @@ void dungeon_display(const dungeon_data *dungeon, const int display_border)
         {
 
 #ifdef DEBUG_DEV_FLAGS
-            if (dungeon->cells[x][y].type == ROCK)
-            {
-                // Print hardness by color
-                printf("\033[48;2;%d;127;127m%c\033[0m", dungeon->cells[x][y].hardness, output[x][y]);
-            }
-            else
+            // Print hardness by color
+            printf("\033[48;2;%d;127;127m%c\033[0m", dungeon->cells[x][y].hardness, output[x][y]);
+#else
+            printf("%c", output[x][y]);
 #endif // DEBUG_DEV_FLAG
-                printf("%c", output[x][y]);
         }
         printf("\n");
     }

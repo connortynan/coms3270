@@ -5,7 +5,7 @@
 #include <string.h>
 #include "util/util.h"
 
-#define NOISE_PERMUTATION_TABLE_LEN 1024
+#define NOISE_PERMUTATION_TABLE_LEN 256
 
 static int noise_permutation[NOISE_PERMUTATION_TABLE_LEN * 2];
 
@@ -27,19 +27,26 @@ static inline float noise_fade(const float t)
     return t * t * t * (t * (t * 6 - 15) + 10);
 }
 
-static inline void noise_hashed_vector(int v, float *x, float *y)
+/**
+ * From Ken Perlin's implementation https://cs.nyu.edu/~perlin/noise/
+ */
+static inline float noise_grad(int hash, float x, float y)
 {
-    *x = (v & 0b01) ? 1.f : -1.f;
-    *y = (v & 0b10) ? 1.f : -1.f;
+    int h = hash & 7;
+    float u = h < 4 ? x : y;
+    float v = h < 4 ? y : x;
+    return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
 }
 
 static inline float noise_perlin(float x, float y)
 {
-    // Take x and y modulo the length of the permutation table (dealing with negatives)
-    int X = (int)fmod(x, NOISE_PERMUTATION_TABLE_LEN);
-    X = (X + NOISE_PERMUTATION_TABLE_LEN) % NOISE_PERMUTATION_TABLE_LEN;
-    int Y = (int)fmod(y, NOISE_PERMUTATION_TABLE_LEN);
-    Y = (Y + NOISE_PERMUTATION_TABLE_LEN) % NOISE_PERMUTATION_TABLE_LEN;
+    int X = ((int)floor(x)) % NOISE_PERMUTATION_TABLE_LEN;
+    if (X < 0)
+        X += NOISE_PERMUTATION_TABLE_LEN;
+
+    int Y = ((int)floor(y)) % NOISE_PERMUTATION_TABLE_LEN;
+    if (Y < 0)
+        Y += NOISE_PERMUTATION_TABLE_LEN;
 
     x -= floorf(x);
     y -= floorf(y);
@@ -48,23 +55,18 @@ static inline float noise_perlin(float x, float y)
     float v = noise_fade(y);
 
     int hash;
-    float vx, vy;
 
-    hash = noise_permutation[noise_permutation[X + 1] + Y + 1];
-    noise_hashed_vector(hash, &vx, &vy);
-    const float t00 = util_dot(x - 1.f, y - 1.f, vx, vy);
+    hash = noise_permutation[(noise_permutation[X + 1] + Y + 1) % NOISE_PERMUTATION_TABLE_LEN];
+    const float t00 = noise_grad(hash, x, y);
 
-    hash = noise_permutation[noise_permutation[X] + Y + 1];
-    noise_hashed_vector(hash, &vx, &vy);
-    const float t01 = util_dot(x, y - 1.f, vx, vy);
+    hash = noise_permutation[(noise_permutation[X + 1] + Y) % NOISE_PERMUTATION_TABLE_LEN];
+    const float t01 = noise_grad(hash, x, y - 1.f);
 
-    hash = noise_permutation[noise_permutation[X + 1] + Y];
-    noise_hashed_vector(hash, &vx, &vy);
-    const float t10 = util_dot(x - 1.f, y, vx, vy);
+    hash = noise_permutation[(noise_permutation[X] + Y + 1) % NOISE_PERMUTATION_TABLE_LEN];
+    const float t10 = noise_grad(hash, x - 1.f, y);
 
-    hash = noise_permutation[noise_permutation[X] + Y];
-    noise_hashed_vector(hash, &vx, &vy);
-    const float t11 = util_dot(x, y, vx, vy);
+    hash = noise_permutation[(noise_permutation[X] + Y) % NOISE_PERMUTATION_TABLE_LEN];
+    const float t11 = noise_grad(hash, x - 1.f, y - 1.f);
 
     return util_lerp(u,
                      util_lerp(v, t00, t01),
