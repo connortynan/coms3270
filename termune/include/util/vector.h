@@ -6,6 +6,8 @@
 /// Default initial capacity of the vector
 #define VECTOR_DEFAULT_CAPACTIY 16
 
+#define VECTOR_EXTRA_CHECKS 0
+
 /**
  * @brief Vector data structure definition
  */
@@ -52,8 +54,10 @@ static inline vector *vector_init(size_t initial_capacity, size_t element_size)
  */
 static inline int vector_destroy(vector *v)
 {
+#ifdef VECTOR_EXTRA_CHECKS
     if (!v)
         return 1;
+#endif // VECTOR_EXTRA_CHECKS
 
     free(v->_elems);
     free(v);
@@ -69,8 +73,10 @@ static inline int vector_destroy(vector *v)
  */
 static inline int vector_reserve(vector *v, size_t new_capacity)
 {
+#ifdef VECTOR_EXTRA_CHECKS
     if (!v || new_capacity <= v->size)
         return 1;
+#endif // VECTOR_EXTRA_CHECKS
 
     void *new_data = realloc(v->_elems, new_capacity * v->_elem_size);
     if (!new_data)
@@ -91,8 +97,10 @@ static inline int vector_reserve(vector *v, size_t new_capacity)
  */
 static inline void *vector_at(vector *v, size_t idx)
 {
+#ifdef VECTOR_EXTRA_CHECKS
     if (!v || idx >= v->size)
         return NULL;
+#endif // VECTOR_EXTRA_CHECKS
 
     return (char *)v->_elems + (idx * v->_elem_size);
 }
@@ -106,8 +114,10 @@ static inline void *vector_at(vector *v, size_t idx)
  */
 static inline int vector_push_back(vector *v, const void *element)
 {
+#ifdef VECTOR_EXTRA_CHECKS
     if (!v || !element)
         return 1;
+#endif // VECTOR_EXTRA_CHECKS
 
     // Ensure enough capacity
     if (v->size == v->_capacity)
@@ -130,8 +140,10 @@ static inline int vector_push_back(vector *v, const void *element)
  */
 static inline void vector_pop_back(vector *v)
 {
+#ifdef VECTOR_EXTRA_CHECKS
     if (!v || v->size == 0)
         return;
+#endif // VECTOR_EXTRA_CHECKS
 
     v->size--;
 }
