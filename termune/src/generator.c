@@ -213,6 +213,17 @@ int generator_generate_dungeon(dungeon_data *dungeon, const generator_parameters
     while (_generator_place_rooms(dungeon, params))
         ;
 
+    if (dungeon->num_rooms > 0)
+    {
+        dungeon->pc_x = dungeon->rooms[0].center_x;
+        dungeon->pc_y = dungeon->rooms[0].center_y;
+    }
+    else
+    {
+        dungeon->pc_x = 1;
+        dungeon->pc_y = 1;
+    }
+
     dungeon->rooms = (dungeon_room_data *)realloc(dungeon->rooms, dungeon->num_rooms * sizeof(dungeon_room_data *));
     if (!dungeon->rooms)
         return 1;
@@ -385,7 +396,7 @@ int generator_set_rock_hardness(dungeon_data *dungeon, const generator_parameter
             for (x = 0; x < DUNGEON_WIDTH; x++)
             {
                 noisy = (int32_t)(hardness[i] + layered_noise_perlin(x + x_off, 2.f * y + y_off, params->rock_hardness_noise_amount, 0.03f, 4, 0.5f, 2.f));
-                hardness[i++] = VALUE_CLAMP(noisy, 0, 254);
+                hardness[i++] = VALUE_CLAMP(noisy, 1, 254);
             }
         }
     }

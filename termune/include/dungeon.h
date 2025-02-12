@@ -64,6 +64,8 @@ typedef struct dungeon_data
     dungeon_room_data *rooms;                          /**< Array of rooms that are in the dungeon (null-terminated) */
     uint16_t num_rooms;                                /**< Number of generated rooms in the dungeon */
 
+    uint8_t pc_x, pc_y;
+
     struct dungeon_data *north; /**< Pointer to the northern dungeon. */
     struct dungeon_data *east;  /**< Pointer to the eastern dungeon. */
     struct dungeon_data *south; /**< Pointer to the southern dungeon. */

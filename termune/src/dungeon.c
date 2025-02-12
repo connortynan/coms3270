@@ -5,6 +5,8 @@
 #include "dungeon.h"
 #include "util/vector.h"
 
+#define DUNGEON_FILE_HEADER "RLG327-S2025"
+
 int dungeon_destroy(dungeon_data *dungeon)
 {
     if (dungeon->north)
@@ -40,6 +42,8 @@ void dungeon_display(const dungeon_data *dungeon, const int display_border)
             output[x][y] = char_map[dungeon->cells[x][y].type];
         }
     }
+
+    output[dungeon->pc_x][dungeon->pc_y] = '@';
 
     if (display_border)
     {
@@ -86,7 +90,7 @@ int dungeon_serialize(const dungeon_data *dungeon, FILE *file)
         return 1;
 
     uint8_t x, y;
-    uint16_t i;
+    uint16_t i, pos;
     vector *up_stairs = vector_init(0, sizeof(uint16_t));
     vector *down_stairs = vector_init(0, sizeof(uint16_t));
 
@@ -94,36 +98,44 @@ int dungeon_serialize(const dungeon_data *dungeon, FILE *file)
         return 1;
 
     // marker
-    const char *marker = "RLG327-S2025";
-    fwrite(marker, sizeof(*marker), 12, file);
+    const char *marker = DUNGEON_FILE_HEADER;
+    fwrite(marker, sizeof(char), 12, file);
 
     // version
-    uint32_t version = htobe32(0);
-    fwrite(&version, sizeof(version), 1, file);
-
-    long file_pos = ftell(file);
+    const uint32_t version = htobe32(0);
+    fwrite(&version, sizeof(uint32_t), 1, file);
 
     // file size (put dummy number for now, we'll update it later)
+    long file_pos = ftell(file);
     uint32_t file_size = 0;
-    fwrite(&file_size, sizeof(file_size), 1, file); // Dummy size for now
+    fwrite(&file_size, sizeof(uint32_t), 1, file);
+
+    // pc coordinates
+    fwrite(&dungeon->pc_x, sizeof(uint8_t), 1, file);
+    fwrite(&dungeon->pc_y, sizeof(uint8_t), 1, file);
 
     // hardness matrix (also gather stair info)
     for (y = 0; y < DUNGEON_HEIGHT; y++)
     {
         for (x = 0; x < DUNGEON_WIDTH; x++)
         {
-            if (dungeon->cells[x][y].type & (CELL_STAIR_UP | CELL_STAIR_DOWN))
+            if (dungeon->cells[x][y].type == CELL_STAIR_UP)
             {
-                uint8_t pos[2] = {x, y};
-                vector_push_back(dungeon->cells[x][y].type == CELL_STAIR_UP ? up_stairs : down_stairs, pos);
+                pos = ((uint16_t)x << 8) | y;
+                vector_push_back(up_stairs, &pos);
+            }
+            else if (dungeon->cells[x][y].type == CELL_STAIR_DOWN)
+            {
+                pos = ((uint16_t)x << 8) | y;
+                vector_push_back(down_stairs, &pos);
             }
 
-            fwrite(&dungeon->cells[x][y].hardness, sizeof(char), 1, file);
+            fwrite(&dungeon->cells[x][y].hardness, sizeof(uint8_t), 1, file);
         }
     }
 
     // rooms: count
-    uint16_t num_rooms = htobe16(dungeon->num_rooms);
+    const int16_t num_rooms = htobe16(dungeon->num_rooms);
     fwrite(&num_rooms, sizeof(uint16_t), 1, file);
 
     // rooms: info
@@ -146,14 +158,14 @@ int dungeon_serialize(const dungeon_data *dungeon, FILE *file)
     }
 
     // up stairs: count
-    uint16_t num_up_stairs = htobe16(up_stairs->size);
+    const uint16_t num_up_stairs = htobe16(up_stairs->size);
     fwrite(&num_up_stairs, sizeof(uint16_t), 1, file);
 
     // up stairs: info
     fwrite(up_stairs->_elems, sizeof(uint16_t), up_stairs->size, file);
 
     // down stairs: count
-    uint16_t num_down_stairs = htobe16(down_stairs->size);
+    const uint16_t num_down_stairs = htobe16(down_stairs->size);
     fwrite(&num_down_stairs, sizeof(uint16_t), 1, file);
 
     // down stairs: info
@@ -179,8 +191,106 @@ int dungeon_deserialize(dungeon_data *dungeon, FILE *file)
     if (!dungeon || !file)
         return 1;
 
-    char marker[12];
-    fread(marker, sizeof(char), 12, file);
+    dungeon->north = dungeon->east = dungeon->south = dungeon->west = dungeon->up = dungeon->down = NULL;
 
-    return 1;
+    uint8_t x, y;
+    uint16_t i;
+
+    // marker
+    char marker[13];
+    fread(marker, sizeof(char), 12, file);
+    marker[12] = 0;
+    if (strcmp(DUNGEON_FILE_HEADER, marker))
+    {
+        fprintf(stderr, "File read error, unknown file marker\n");
+        return 1;
+    }
+
+    // version
+    uint32_t version;
+    fread(&version, sizeof(uint32_t), 1, file);
+    version = be32toh(version);
+
+    // file size
+    uint32_t file_size;
+    fread(&file_size, sizeof(uint32_t), 1, file);
+    file_size = be32toh(file_size);
+
+    // pc coordinates
+    fread(&dungeon->pc_x, sizeof(uint8_t), 1, file);
+    fread(&dungeon->pc_y, sizeof(uint8_t), 1, file);
+
+    // hardness
+    for (y = 0; y < DUNGEON_HEIGHT; y++)
+    {
+        for (x = 0; x < DUNGEON_WIDTH; x++)
+        {
+            fread(&dungeon->cells[x][y].hardness, sizeof(uint8_t), 1, file);
+            // Fill all >0 to rock, and all =0 to corridors (other 0-hardness cells with overwrite this)
+            dungeon->cells[x][y].type = (dungeon->cells[x][y].hardness > 0) ? CELL_ROCK : CELL_CORRIDOR;
+        }
+    }
+
+    // rooms
+    uint16_t num_rooms;
+    fread(&num_rooms, sizeof(uint16_t), 1, file);
+    num_rooms = be16toh(num_rooms);
+
+    dungeon->num_rooms = num_rooms;
+    dungeon->rooms = (dungeon_room_data *)malloc(dungeon->num_rooms * sizeof(*dungeon->rooms));
+
+    uint8_t room_x, room_y, room_w, room_h;
+    for (i = 0; i < num_rooms; i++)
+    {
+        fread(&room_x, sizeof(uint8_t), 1, file);
+        fread(&room_y, sizeof(uint8_t), 1, file);
+        fread(&room_w, sizeof(uint8_t), 1, file);
+        fread(&room_h, sizeof(uint8_t), 1, file);
+
+        dungeon->rooms[i].center_x = room_x + room_w / 2;
+        dungeon->rooms[i].center_y = room_y + room_h / 2;
+        dungeon->rooms[i].width = room_w;
+        dungeon->rooms[i].height = room_h;
+
+        for (x = room_x; x < room_x + room_w; x++)
+        {
+            for (y = room_y; y < room_y + room_h; y++)
+            {
+                dungeon->cells[x][y].type = CELL_ROOM;
+            }
+        }
+    }
+
+    uint16_t pos;
+    uint8_t stair_x, stair_y;
+
+    // up stairs
+    uint16_t num_up_stairs;
+    fread(&num_up_stairs, sizeof(uint16_t), 1, file);
+    num_up_stairs = be16toh(num_up_stairs);
+
+    for (i = 0; i < num_up_stairs; i++)
+    {
+        fread(&pos, sizeof(uint16_t), 1, file);
+        stair_x = (pos >> 8) & 0xFF;
+        stair_y = (pos) & 0xFF;
+
+        dungeon->cells[stair_x][stair_y].type = CELL_STAIR_UP;
+    }
+
+    // down stairs
+    uint16_t num_down_stairs;
+    fread(&num_down_stairs, sizeof(uint16_t), 1, file);
+    num_down_stairs = be16toh(num_down_stairs);
+
+    for (i = 0; i < num_down_stairs; i++)
+    {
+        fread(&pos, sizeof(uint16_t), 1, file);
+        stair_x = (pos >> 8) & 0xFF;
+        stair_y = (pos) & 0xFF;
+
+        dungeon->cells[stair_x][stair_y].type = CELL_STAIR_DOWN;
+    }
+
+    return 0;
 }

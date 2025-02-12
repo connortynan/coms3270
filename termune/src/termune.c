@@ -35,12 +35,11 @@ int main(int argc, char const *argv[])
         const char *arg = argv[i];
         if (!strcmp("--save", arg))
             save_flag = 1;
-        else if (!strcmp("--load", arg))
+        if (!strcmp("--load", arg))
             load_flag = 1;
     }
 
     int rng_seed = time(NULL);
-    printf("Seed: %d\n", rng_seed);
 
     srand(rng_seed);
     noise_generate_permutation();
@@ -69,18 +68,21 @@ int main(int argc, char const *argv[])
 
     if (load_flag)
     {
+        printf("Reading from file: %s\n", filename);
         FILE *dungeon_load = fopen(filename, "rb");
         dungeon_deserialize(&dungeon, dungeon_load);
         fclose(dungeon_load);
     }
     else
     {
+        printf("Generating from seed: %d\n", rng_seed);
         generator_generate_dungeon(&dungeon, &params);
     }
     dungeon_display(&dungeon, 1);
 
     if (save_flag)
     {
+        printf("Saving to file: %s\n", filename);
         FILE *dungeon_save = fopen(filename, "wb");
         dungeon_serialize(&dungeon, dungeon_save);
         fclose(dungeon_save);
