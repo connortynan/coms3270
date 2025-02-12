@@ -1,5 +1,17 @@
 ## RECENT AT TOP
 
+2/12/25 - 12:00 AM:
+    - Finished `dungeon_deserialize` and tested with test case dungeon files.
+
+2/9/25 - 12:00 AM:
+    - Finished `dungeon_serialize`
+
+2/8/25 - 8:00 PM:
+    - Modified noise algorithm for more interesting rock hardness
+
+2/8/25 - 3:00 PM:
+    - Fixed bug in stair generation code which only put it in corridors
+
 2/5/25 - 3:00 PM:
     - Added stairs
 
