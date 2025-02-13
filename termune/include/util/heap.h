@@ -16,7 +16,7 @@
 typedef int (*heap_comp_func)(const void *a, const void *b);
 
 /**
- * @brief Heap data structure definition.
+ * @brief Heap data structure which works for generic types using void casting
  */
 typedef struct heap
 {

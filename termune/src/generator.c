@@ -1,7 +1,6 @@
 #include <stdio.h>
 
 #include "generator.h"
-#include "util/bool_array.h"
 #include "util/pathing.h"
 #include "util/img_proc.h"
 #include "util/noise.h"
