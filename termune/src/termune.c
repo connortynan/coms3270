@@ -39,32 +39,7 @@ int main(int argc, char const *argv[])
             load_flag = 1;
     }
 
-    int rng_seed = time(NULL);
-
-    srand(rng_seed);
-    noise_generate_permutation();
-
     dungeon_data dungeon;
-
-    generator_parameters params = {
-        .min_num_rooms = 6,
-        .max_num_rooms = 10,
-
-        .min_room_width = 6,
-        .max_room_width = 20,
-
-        .min_room_height = 4,
-        .max_room_height = 10,
-
-        .min_num_stairs = 2,
-        .max_num_stairs = 4,
-
-        .min_rock_hardness = 128,
-        .max_rock_hardness = 192,
-
-        .rock_hardness_smoothness = 5,
-        .rock_hardness_noise_amount = 500.f,
-    };
 
     if (load_flag)
     {
@@ -75,6 +50,31 @@ int main(int argc, char const *argv[])
     }
     else
     {
+        int rng_seed = time(NULL);
+
+        srand(rng_seed);
+        noise_generate_permutation();
+
+        generator_parameters params = {
+            .min_num_rooms = 6,
+            .max_num_rooms = 10,
+
+            .min_room_width = 6,
+            .max_room_width = 20,
+
+            .min_room_height = 4,
+            .max_room_height = 10,
+
+            .min_num_stairs = 2,
+            .max_num_stairs = 4,
+
+            .min_rock_hardness = 128,
+            .max_rock_hardness = 192,
+
+            .rock_hardness_smoothness = 5,
+            .rock_hardness_noise_amount = 500.f,
+        };
+
         printf("Generating from seed: %d\n", rng_seed);
         generator_generate_dungeon(&dungeon, &params);
     }
