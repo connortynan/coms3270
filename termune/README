@@ -1,9 +1,9 @@
 # termune / coms327 rougelike
 
-Assignment 1.01 - Dungeon generation
+Assignment 1.02 - Dungeon Load/Save
 ---
 
-This implements backtracking room placement, Dijkstra's pathing for corridors, perlin noise and gaussian blurs for setting rock hardness.
+The program by default does the same thing as 1.01, but now has support for `--save` and `--load` flags to save and load from disk.
 
 ---
 
@@ -18,10 +18,19 @@ Build instructions
 make
 ```
 
+---
+
 Usage
 ```
-bin/termune
+bin/termune [--save] [--load]
 ```
+
+Options:
+ - `--save` saves the current dungeon to disk at `~/.rlg327/dungeon`
+ - `--load` loads the last saved dungeon from disk at `~/.rlg327/dungeon`
+ - Note: both `--save` and `--load` can be used together, which will read from the file and immediate write back to the same file the equivalent data.
+
+---
 
 Uninstall
 ```
