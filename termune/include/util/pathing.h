@@ -6,6 +6,7 @@
 #include "util/vector.h"
 #include "util/heap.h"
 
+/// Macro to check if a coordinate is within grid bounds.
 #define WITHIN_BOUNDS(x, y, w, h) (((x) >= 0) && ((x) < w) && ((y) >= 0) && ((y) < h))
 
 /**

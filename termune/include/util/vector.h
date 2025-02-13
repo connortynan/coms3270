@@ -6,6 +6,7 @@
 /// Default initial capacity of the vector
 #define VECTOR_DEFAULT_CAPACTIY 16
 
+/// Perform extra error checking on vectors (slower but useful to debug)
 #define VECTOR_EXTRA_CHECKS 0
 
 /**

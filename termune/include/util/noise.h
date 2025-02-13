@@ -5,10 +5,18 @@
 #include <string.h>
 #include "util/util.h"
 
+/// Length of the noise permutation table.
 #define NOISE_PERMUTATION_TABLE_LEN 256
 
+/// Noise permutation table used for seed-dependent noise generation.
 static int noise_permutation[NOISE_PERMUTATION_TABLE_LEN * 2];
 
+/**
+ * @brief Generates a random permutation table for Perlin noise.
+ *
+ * This function initializes and shuffles the noise permutation table, then duplicates it
+ * to avoid boundary issues when wrapping values.
+ */
 static inline void noise_generate_permutation()
 {
     int i;
@@ -22,13 +30,30 @@ static inline void noise_generate_permutation()
     memcpy(&noise_permutation[NOISE_PERMUTATION_TABLE_LEN], noise_permutation, NOISE_PERMUTATION_TABLE_LEN * sizeof(*noise_permutation));
 }
 
+/**
+ * @brief Smoothstep function used in Perlin noise interpolation.
+ *
+ * This function smooths a value `t` using the polynomial 6t^5 - 15t^4 + 10t^3 to
+ * achieve a smooth transition between noise values.
+ *
+ * @param t Input value in the range [0, 1].
+ * @return Smoothed value.
+ */
 static inline float noise_fade(const float t)
 {
     return t * t * t * (t * (t * 6 - 15) + 10);
 }
 
 /**
- * From Ken Perlin's implementation https://cs.nyu.edu/~perlin/noise/
+ * @brief Computes gradient vector dot product for Perlin noise.
+ *
+ * This function calculates the dot product between the gradient vector and
+ * the input coordinate offset to create directional variations in the noise.
+ *
+ * @param hash Hash value used to determine gradient direction.
+ * @param x X offset from grid point.
+ * @param y Y offset from grid point.
+ * @return Dot product of the gradient vector and the input coordinates.
  */
 static inline float noise_grad(int hash, float x, float y)
 {
@@ -38,6 +63,16 @@ static inline float noise_grad(int hash, float x, float y)
     return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
 }
 
+/**
+ * @brief Computes 2D Perlin noise at given coordinates.
+ *
+ * This function calculates a Perlin noise value based on an input position `(x, y)`.
+ * It interpolates between noise values at the surrounding grid points.
+ *
+ * @param x X-coordinate.
+ * @param y Y-coordinate.
+ * @return Perlin noise value in the range [-1, 1].
+ */
 static inline float noise_perlin(float x, float y)
 {
     int X = ((int)floor(x)) % NOISE_PERMUTATION_TABLE_LEN;
@@ -73,6 +108,21 @@ static inline float noise_perlin(float x, float y)
                      util_lerp(v, t10, t11));
 }
 
+/**
+ * @brief Generates layered Perlin noise (Fractional Brownian Motion).
+ *
+ * This function creates multi-octave Perlin noise by summing noise layers at
+ * increasing frequencies and decreasing amplitudes.
+ *
+ * @param x X-coordinate.
+ * @param y Y-coordinate.
+ * @param amplitude Initial amplitude of the noise.
+ * @param frequency Initial frequency of the noise.
+ * @param octaves Number of noise layers.
+ * @param persistence Amplitude multiplier per octave (controls roughness).
+ * @param lacunarity Frequency multiplier per octave (controls detail).
+ * @return Layered Perlin noise value.
+ */
 static inline float layered_noise_perlin(
     float x, float y,
     float amplitude, float frequency,
