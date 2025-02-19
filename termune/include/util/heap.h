@@ -2,7 +2,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-
 #include "util/util.h"
 #include "util/vector.h"
 
@@ -13,7 +12,7 @@
  *
  * @var heap_comp_func
  */
-typedef int (*heap_comp_func)(const void *a, const void *b);
+typedef int (*heap_comp_func)(const void *a, const void *b, void *context);
 
 /**
  * @brief Heap data structure which works for generic types using type agnostic vectors as a backend
@@ -22,6 +21,7 @@ typedef struct heap
 {
     vector *_vec;            /**< Vector to store heap elements */
     heap_comp_func _compare; /**< Function to compare elements */
+    void *context;           /**< Context for comparison function */
 } heap;
 
 static inline void _heapify_up(heap *h, size_t idx)
@@ -29,11 +29,10 @@ static inline void _heapify_up(heap *h, size_t idx)
     while (idx > 0)
     {
         size_t parent_index = (idx - 1) / 2;
-
         void *current_elem = vector_at(h->_vec, idx);
         void *parent_elem = vector_at(h->_vec, parent_index);
 
-        if (h->_compare(current_elem, parent_elem) >= 0)
+        if (h->_compare(current_elem, parent_elem, h->context) >= 0)
             break;
 
         util_swap_elements(current_elem, parent_elem, h->_vec->_elem_size);
@@ -48,26 +47,13 @@ static inline void _heapify_down(heap *h, size_t idx)
         size_t left_child = 2 * idx + 1;
         size_t right_child = 2 * idx + 2;
         size_t smallest = idx;
-
         void *current_elem = vector_at(h->_vec, idx);
 
-        if (left_child < h->_vec->size)
-        {
-            void *left_elem = vector_at(h->_vec, left_child);
-            if (h->_compare(left_elem, current_elem) < 0)
-            {
-                smallest = left_child;
-            }
-        }
+        if (left_child < h->_vec->size && h->_compare(vector_at(h->_vec, left_child), current_elem, h->context) < 0)
+            smallest = left_child;
 
-        if (right_child < h->_vec->size)
-        {
-            void *right_elem = vector_at(h->_vec, right_child);
-            if (h->_compare(right_elem, vector_at(h->_vec, smallest)) < 0)
-            {
-                smallest = right_child;
-            }
-        }
+        if (right_child < h->_vec->size && h->_compare(vector_at(h->_vec, right_child), vector_at(h->_vec, smallest), h->context) < 0)
+            smallest = right_child;
 
         if (smallest == idx)
             break;
@@ -80,12 +66,13 @@ static inline void _heapify_down(heap *h, size_t idx)
 /**
  * @brief Initializes a new heap.
  *
- * @param initial_capacity number of elements to initilize the heap to store, will use default value for any non-positive input
+ * @param initial_capacity number of elements to initialize the heap to store, will use default value for any non-positive input
  * @param element_size Size of each element in bytes
- * @param comp_func Functoin pointer to compare elements in the heap to extract the minimum
+ * @param comp_func Function pointer to compare elements in the heap to extract the minimum
+ * @param context User-defined context for comparison function
  * @return Pointer to the created heap or NULL on failure
  */
-static inline heap *heap_init(size_t initial_capacity, size_t element_size, heap_comp_func comp_func)
+static inline heap *heap_init(size_t initial_capacity, size_t element_size, heap_comp_func comp_func, void *context)
 {
     if (element_size == 0 || !comp_func)
         return NULL;
@@ -102,6 +89,7 @@ static inline heap *heap_init(size_t initial_capacity, size_t element_size, heap
     }
 
     h->_compare = comp_func;
+    h->context = context;
     return h;
 }
 
@@ -163,14 +151,11 @@ static inline void *heap_peek(const heap *h)
  */
 static inline int heap_poll(heap *h, void *result)
 {
-    if (!h || h->_vec->size == 0)
+    if (!h || h->_vec->size == 0 || !result)
         return 1;
 
     memcpy(result, vector_at(h->_vec, 0), h->_vec->_elem_size);
-
-    // Move the last element to the root and heapify down
-    void *last_elem = vector_at(h->_vec, h->_vec->size - 1);
-    memcpy(vector_at(h->_vec, 0), last_elem, h->_vec->_elem_size);
+    memcpy(vector_at(h->_vec, 0), vector_at(h->_vec, h->_vec->size - 1), h->_vec->_elem_size);
     h->_vec->size--;
 
     _heapify_down(h, 0);

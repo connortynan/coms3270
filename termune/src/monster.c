@@ -1,5 +1,19 @@
 #include "monster.h"
 
+int monster_generate_nontunneling_distance_map(
+    monster_distance_map *dist_map,
+    dungeon_data *dungeon)
+{
+    return 0;
+}
+
+int monster_generate_tunneling_distance_map(
+    monster_distance_map *dist_map,
+    dungeon_data *dungeon)
+{
+    return 0;
+}
+
 int monster_print_distance_map(
     monster_distance_map *dist_map,
     dungeon_data *dungeon)

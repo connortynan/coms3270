@@ -140,14 +140,48 @@ int _generator_place_rooms(dungeon_data *dungeon, const generator_parameters *pa
     return 0;
 }
 
+// Pathing functions for corridors
+uint64_t _generator_corridor_pathing_cost_eval(size_t node_idx, pathing_context *ctx)
+{
+    return *((uint8_t *)ctx->nodes[node_idx].data);
+}
+
+void _generator_corridor_pathing_neighbors(size_t node_idx, pathing_context *ctx)
+{
+    static const int nbor_offsets[4][2] = {{0, -1},
+                                           {0, 1},
+                                           {-1, 0},
+                                           {1, 0}};
+    static const uint8_t num_nbors = 4;
+
+    uint8_t x = node_idx % DUNGEON_WIDTH;
+    uint8_t y = node_idx / DUNGEON_WIDTH;
+
+    uint8_t nx, ny;
+    for (uint8_t i = 0; i < num_nbors; i++)
+    {
+        nx = x + nbor_offsets[i][0];
+        ny = y + nbor_offsets[i][1];
+        if (nx < DUNGEON_WIDTH && ny < DUNGEON_HEIGHT)
+            pathing_eval_node(node_idx, nx + ny * DUNGEON_WIDTH, ctx);
+    }
+}
+
+int _generator_corridor_pathing_end_condition(size_t node_idx, pathing_context *ctx)
+{
+    return node_idx == *((size_t *)ctx->data);
+}
+
 int _generator_connect_rooms(dungeon_data *dungeon)
 {
     vector *path;
-    size_t i, j;
-    uint16_t x, y;
-    uint16_t ax, ay, bx, by;
 
-    uint8_t *weights = (uint8_t *)malloc(DUNGEON_WIDTH * DUNGEON_HEIGHT * sizeof(*weights));
+    uint8_t x, y;
+
+    uint16_t i;
+    size_t j;
+
+    uint8_t weights[DUNGEON_WIDTH * DUNGEON_HEIGHT];
     i = 0;
     for (y = 0; y < DUNGEON_HEIGHT; y++)
     {
@@ -157,22 +191,30 @@ int _generator_connect_rooms(dungeon_data *dungeon)
         }
     }
 
+    size_t start_idx, goal_idx;
     for (i = 0; i < dungeon->num_rooms; i++)
     {
-        uint16_t next_idx = (i + 1) % dungeon->num_rooms;
-        ax = dungeon->rooms[i].center_x;
-        ay = dungeon->rooms[i].center_y;
-        bx = dungeon->rooms[next_idx].center_x;
-        by = dungeon->rooms[next_idx].center_y;
+        start_idx = (dungeon->rooms[i].center_x) + (dungeon->rooms[i].center_y * DUNGEON_WIDTH);
+        uint8_t n_i = (i + 1) % dungeon->num_rooms;
 
-        path = pathing_solve(weights, DUNGEON_WIDTH, DUNGEON_HEIGHT, ax, ay, bx, by);
+        goal_idx = (dungeon->rooms[n_i].center_x) + (dungeon->rooms[n_i].center_y * DUNGEON_WIDTH);
+
+        path = pathing_solve(start_idx, DUNGEON_WIDTH * DUNGEON_HEIGHT,
+                             weights, sizeof(uint8_t),
+                             &goal_idx,
+                             _generator_corridor_pathing_cost_eval,
+                             _generator_corridor_pathing_neighbors,
+                             _generator_corridor_pathing_end_condition);
         if (!path)
             continue;
 
         for (j = 0; j < path->size; j++)
         {
-            vec2_u16 *loc = (vec2_u16 *)vector_at(path, j);
-            dungeon_cell *cell = &dungeon->cells[loc->x][loc->y];
+            size_t *idx = (size_t *)vector_at(path, j);
+            x = *idx % DUNGEON_WIDTH;
+            y = *idx / DUNGEON_WIDTH;
+
+            dungeon_cell *cell = &dungeon->cells[x][y];
             if (cell->type == CELL_ROCK)
             {
                 cell->type = CELL_CORRIDOR;
@@ -181,7 +223,6 @@ int _generator_connect_rooms(dungeon_data *dungeon)
         }
         vector_destroy(path);
     }
-    free(weights);
     return 0;
 }
 

@@ -1,7 +1,8 @@
 #pragma once
 
-#include "common.h"
+#include <stdint.h>
 
+#include "common.h"
 #include "dungeon.h"
 
 /**
