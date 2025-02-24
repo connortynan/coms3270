@@ -30,4 +30,7 @@ tar: clean
 		exit 1; \
 	fi
 	mkdir -p $(TAR_DIR)
-	tar -czf $(TAR_DIR)/tynan_connor.assignment-$(version).tar.gz -C $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))) .
+	mkdir -p $(TAR_DIR)/tynan_connor.assignment-$(version)
+	cp -r $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/* $(TAR_DIR)/tynan_connor.assignment-$(version)
+	tar -czf $(TAR_DIR)/tynan_connor.assignment-$(version).tar.gz -C $(TAR_DIR) tynan_connor.assignment-$(version)
+	rm -rf $(TAR_DIR)/tynan_connor.assignment-$(version)
