@@ -169,6 +169,7 @@ void _generator_corridor_pathing_neighbors(size_t node_idx, pathing_context *ctx
 
 int _generator_corridor_pathing_end_condition(size_t node_idx, pathing_context *ctx)
 {
+    // ctx->data stores the end indexD
     return node_idx == *((size_t *)ctx->data);
 }
 

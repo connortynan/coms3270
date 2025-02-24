@@ -5,6 +5,7 @@
 
 #include "dungeon.h"
 #include "generator.h"
+#include "monster.h"
 #include "util/noise.h"
 
 int main(int argc, char const *argv[])
@@ -41,6 +42,7 @@ int main(int argc, char const *argv[])
 
     dungeon_data dungeon;
 
+    // Get the dungeon (either from file or random seed)
     if (load_flag)
     {
         printf("Reading from file: %s\n", filename);
@@ -78,7 +80,20 @@ int main(int argc, char const *argv[])
         printf("Generating from seed: %d\n", rng_seed);
         generator_generate_dungeon(&dungeon, &params);
     }
+
+    // Calculate distance maps and display dungeon/maps
     dungeon_display(&dungeon, 1);
+    printf("\n\n");
+
+    monster_distance_map nontunneling;
+    monster_distance_map tunneling;
+
+    monster_generate_nontunneling_distance_map(&nontunneling, &dungeon);
+    monster_generate_tunneling_distance_map(&tunneling, &dungeon);
+    printf("\n\n");
+
+    monster_print_distance_map(&nontunneling, &dungeon);
+    monster_print_distance_map(&tunneling, &dungeon);
 
     if (save_flag)
     {
