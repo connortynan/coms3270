@@ -38,7 +38,7 @@ void _monster_pathing_neighbors(size_t node_idx, pathing_context *ctx)
     }
 
     monster_distance_map *m = (monster_distance_map *)ctx->data;
-    m->distances[x][y] = ctx->nodes[node_idx].cost;
+    (*m)[x][y] = ctx->nodes[node_idx].cost;
 }
 
 int _monster_pathing_end_condition(size_t node_idx, pathing_context *ctx)
@@ -54,7 +54,7 @@ int monster_generate_generic_distance_map(
 {
     // Set all distances to UINT32_MAX (unreachable)
     // Then overwrite the reachable nodes
-    memset(dist_map->distances, 0xFF, sizeof(uint32_t) * DUNGEON_WIDTH * DUNGEON_HEIGHT);
+    memset(dist_map, 0xFF, sizeof(uint32_t) * DUNGEON_WIDTH * DUNGEON_HEIGHT);
 
     size_t start_idx = dungeon->pc_x + dungeon->pc_y * DUNGEON_WIDTH;
     vector *path;
@@ -121,10 +121,10 @@ int monster_print_distance_map(
         {
             if (x == dungeon->pc_x && y == dungeon->pc_y)
                 printf("@");
-            else if (dist_map->distances[x][y] == UINT32_MAX)
+            else if ((*dist_map)[x][y] == UINT32_MAX)
                 printf(" ");
             else
-                printf("%1d", dist_map->distances[x][y] % 10);
+                printf("%1d", (*dist_map)[x][y] % 10);
         }
         printf("\n");
     }

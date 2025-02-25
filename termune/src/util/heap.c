@@ -1,28 +1,18 @@
-#pragma once
-
+#include "heap.h"
 #include <stdlib.h>
 #include <string.h>
-#include "util/util.h"
+#include "util/generic_utils.h"
 #include "util/vector.h"
-
-/**
- * @brief Comparison function for heap elements.
- *
- * Should return a negative value if a < b, 0 if a == b, and a positive value if a > b.
- *
- * @var heap_comp_func
- */
-typedef int (*heap_comp_func)(const void *a, const void *b, void *context);
 
 /**
  * @brief Heap data structure which works for generic types using type agnostic vectors as a backend
  */
-typedef struct heap
+struct heap
 {
     vector *_vec;            /**< Vector to store heap elements */
     heap_comp_func _compare; /**< Function to compare elements */
     void *context;           /**< Context for comparison function */
-} heap;
+};
 
 static inline void _heapify_up(heap *h, size_t idx)
 {
@@ -63,16 +53,7 @@ static inline void _heapify_down(heap *h, size_t idx)
     }
 }
 
-/**
- * @brief Initializes a new heap.
- *
- * @param initial_capacity number of elements to initialize the heap to store, will use default value for any non-positive input
- * @param element_size Size of each element in bytes
- * @param comp_func Function pointer to compare elements in the heap to extract the minimum
- * @param context User-defined context for comparison function
- * @return Pointer to the created heap or NULL on failure
- */
-static inline heap *heap_init(size_t initial_capacity, size_t element_size, heap_comp_func comp_func, void *context)
+heap *heap_init(size_t initial_capacity, size_t element_size, heap_comp_func comp_func, void *context)
 {
     if (element_size == 0 || !comp_func)
         return NULL;
@@ -93,13 +74,7 @@ static inline heap *heap_init(size_t initial_capacity, size_t element_size, heap
     return h;
 }
 
-/**
- * @brief Destroys the heap and frees associated memory.
- *
- * @param h Pointer to the heap
- * @return 0 on success, or 1 if the heap is NULL
- */
-static inline int heap_destroy(heap *h)
+int heap_destroy(heap *h)
 {
     if (!h)
         return 1;
@@ -109,14 +84,7 @@ static inline int heap_destroy(heap *h)
     return 0;
 }
 
-/**
- * @brief Inserts a new element into the heap.
- *
- * @param h Pointer to the heap
- * @param element Pointer to the element to be inserted
- * @return 0 on success, or 1 if memory allocation fails
- */
-static inline int heap_insert(heap *h, const void *element)
+int heap_insert(heap *h, const void *element)
 {
     if (!h || !element)
         return 1;
@@ -128,13 +96,7 @@ static inline int heap_insert(heap *h, const void *element)
     return 0;
 }
 
-/**
- * @brief Peeks at the minimum element in the heap without removing it.
- *
- * @param h Pointer to the heap
- * @return Pointer to the minimum element, or NULL if the heap is empty
- */
-static inline void *heap_peek(const heap *h)
+void *heap_peek(const heap *h)
 {
     if (!h || h->_vec->size == 0)
         return NULL;
@@ -142,14 +104,7 @@ static inline void *heap_peek(const heap *h)
     return vector_at(h->_vec, 0);
 }
 
-/**
- * @brief Extracts and removes the minimum element from the heap.
- *
- * @param h Pointer to the heap
- * @param result Pointer that the minimum element will be written to.
- * @return 0 if successfully polled, or 1 on error or if heap is empty
- */
-static inline int heap_poll(heap *h, void *result)
+int heap_poll(heap *h, void *result)
 {
     if (!h || h->_vec->size == 0 || !result)
         return 1;
@@ -160,4 +115,9 @@ static inline int heap_poll(heap *h, void *result)
 
     _heapify_down(h, 0);
     return 0;
+}
+
+size_t heap_size(heap *h)
+{
+    return h->_vec->size;
 }

@@ -4,6 +4,7 @@
 #include "util/pathing.h"
 #include "util/img_proc.h"
 #include "util/noise.h"
+#include "util/generic_utils.h"
 
 #define GENERATOR_ROOM_BUCKET_SIZE 256
 

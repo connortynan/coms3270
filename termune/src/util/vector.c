@@ -1,39 +1,15 @@
-#pragma once
-
-#include <stdlib.h>
-#include <string.h>
-
-/// Default initial capacity of the vector
-#define VECTOR_DEFAULT_CAPACTIY 16
-
-/// Perform extra error checking on vectors (slower but useful to debug)
-#define VECTOR_EXTRA_CHECKS 0
-
-/**
- * @brief Vector data structure definition
- */
-typedef struct vector
-{
-    void *_elems;      /**< Pointer to the vector elements */
-    size_t _capacity;  /**< Current capacity of the vector */
-    size_t _elem_size; /**< Size of each element in bytes */
-    size_t size;       /**< Current number of elements in the vector */
-} vector;
+#include "vector.h"
 
 /**
  * @brief Initializes a new vector with a specified initial capacity and element size.
- *
- * @param initial_capacity Initial capacity of the vector, or default if non-positive
- * @param element_size Size of each element in bytes
- * @return Pointer to the created vector or NULL on failure
  */
-static inline vector *vector_init(size_t initial_capacity, size_t element_size)
+vector *vector_init(size_t initial_capacity, size_t element_size)
 {
     vector *v = (vector *)malloc(sizeof(vector));
     if (!v)
         return NULL;
 
-    v->_capacity = initial_capacity > 0 ? initial_capacity : VECTOR_DEFAULT_CAPACTIY;
+    v->_capacity = initial_capacity > 0 ? initial_capacity : VECTOR_DEFAULT_CAPACITY;
     v->_elem_size = element_size;
 
     v->_elems = malloc(v->_capacity * v->_elem_size);
@@ -49,11 +25,8 @@ static inline vector *vector_init(size_t initial_capacity, size_t element_size)
 
 /**
  * @brief Destroys the vector and frees associated memory.
- *
- * @param v Pointer to the vector
- * @return 0 on success, or 1 if the vector is NULL
  */
-static inline int vector_destroy(vector *v)
+int vector_destroy(vector *v)
 {
 #ifdef VECTOR_EXTRA_CHECKS
     if (!v)
@@ -67,12 +40,8 @@ static inline int vector_destroy(vector *v)
 
 /**
  * @brief Reserves additional capacity for the vector.
- *
- * @param v Pointer to the vector
- * @param new_capacity The new capacity to reserve
- * @return 0 on success, or 1 if memory allocation fails or new_capacity is invalid
  */
-static inline int vector_reserve(vector *v, size_t new_capacity)
+int vector_reserve(vector *v, size_t new_capacity)
 {
 #ifdef VECTOR_EXTRA_CHECKS
     if (!v || new_capacity <= v->size)
@@ -91,12 +60,8 @@ static inline int vector_reserve(vector *v, size_t new_capacity)
 
 /**
  * @brief Returns a pointer to the element at a specific index.
- *
- * @param v Pointer to the vector
- * @param idx Index of the element
- * @return Pointer to the element, or NULL if the index is out of bounds
  */
-static inline void *vector_at(vector *v, size_t idx)
+void *vector_at(vector *v, size_t idx)
 {
 #ifdef VECTOR_EXTRA_CHECKS
     if (!v || idx >= v->size)
@@ -108,12 +73,8 @@ static inline void *vector_at(vector *v, size_t idx)
 
 /**
  * @brief Pushes a new element to the back of the vector.
- *
- * @param v Pointer to the vector
- * @param element Pointer to the element to push
- * @return 0 on success, or 1 if memory allocation fails
  */
-static inline int vector_push_back(vector *v, const void *element)
+int vector_push_back(vector *v, const void *element)
 {
 #ifdef VECTOR_EXTRA_CHECKS
     if (!v || !element)
@@ -136,10 +97,8 @@ static inline int vector_push_back(vector *v, const void *element)
 
 /**
  * @brief Removes the last element from the vector.
- *
- * @param v Pointer to the vector
  */
-static inline void vector_pop_back(vector *v)
+void vector_pop_back(vector *v)
 {
 #ifdef VECTOR_EXTRA_CHECKS
     if (!v || v->size == 0)

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 #include <sys/stat.h>
 
 #include "dungeon.h"
@@ -82,18 +83,23 @@ int main(int argc, char const *argv[])
     }
 
     // Calculate distance maps and display dungeon/maps
-    dungeon_display(&dungeon, 1);
-    printf("\n\n");
+    printf("========================================"
+           "========================================\n");
+    dungeon_display(&dungeon, 0);
 
     monster_distance_map nontunneling;
     monster_distance_map tunneling;
-
     monster_generate_nontunneling_distance_map(&nontunneling, &dungeon);
     monster_generate_tunneling_distance_map(&tunneling, &dungeon);
-    printf("\n\n");
 
+    printf("========================================"
+           "========================================\n");
     monster_print_distance_map(&nontunneling, &dungeon);
+    printf("========================================"
+           "========================================\n");
     monster_print_distance_map(&tunneling, &dungeon);
+    printf("========================================"
+           "========================================\n");
 
     if (save_flag)
     {

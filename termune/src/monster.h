@@ -5,17 +5,7 @@
 #include "common.h"
 #include "dungeon.h"
 
-/**
- * @struct monster_distance_map
- * @brief Structure representing a distance map for monsters.
- *
- * This structure stores a two-dimensional array representing distances from monsters
- * to the player or other key locations within the dungeon.
- */
-typedef struct monster_distance_map
-{
-    uint32_t distances[DUNGEON_WIDTH][DUNGEON_HEIGHT]; /**< Distance map where each cell stores the computed distance value. */
-} monster_distance_map;
+typedef uint32_t monster_distance_map[DUNGEON_WIDTH][DUNGEON_HEIGHT];
 
 /**
  * @brief Generates the non-tunneling distance map for monsters.

@@ -1,39 +1,29 @@
-#pragma once
-
+#include "deque.h"
 #include <stdlib.h>
 #include <string.h>
-
-/// Perform extra error checking on deque (slower but useful for debugging)
-#define DEQUE_EXTRA_CHECKS 0
 
 /**
  * @brief Node structure for the linked list deque
  */
 typedef struct deque_node
 {
-    void *data;              /**< Pointer to the node data */
-    struct deque_node *next; /**< Pointer to the next node */
-    struct deque_node *prev; /**< Pointer to the previous node */
+    void *data;
+    struct deque_node *next;
+    struct deque_node *prev;
 } deque_node;
 
 /**
  * @brief Deque data structure definition
  */
-typedef struct deque
+struct deque
 {
-    deque_node *head;  /**< Pointer to the front node */
-    deque_node *tail;  /**< Pointer to the back node */
-    size_t _elem_size; /**< Size of each element in bytes */
-    size_t size;       /**< Current number of elements in the deque */
-} deque;
+    deque_node *head;
+    deque_node *tail;
+    size_t _elem_size;
+    size_t size;
+};
 
-/**
- * @brief Initializes a new deque with a specified element size.
- *
- * @param element_size Size of each element in bytes
- * @return Pointer to the created deque or NULL on failure
- */
-static inline deque *deque_init(size_t element_size)
+deque *deque_init(size_t element_size)
 {
     deque *d = (deque *)malloc(sizeof(deque));
     if (!d)
@@ -46,18 +36,12 @@ static inline deque *deque_init(size_t element_size)
     return d;
 }
 
-/**
- * @brief Destroys the deque and frees associated memory.
- *
- * @param d Pointer to the deque
- * @return 0 on success, or 1 if the deque is NULL
- */
-static inline int deque_destroy(deque *d)
+int deque_destroy(deque *d)
 {
 #ifdef DEQUE_EXTRA_CHECKS
     if (!d)
         return 1;
-#endif // DEQUE_EXTRA_CHECKS
+#endif
 
     deque_node *current = d->head;
     while (current)
@@ -72,19 +56,12 @@ static inline int deque_destroy(deque *d)
     return 0;
 }
 
-/**
- * @brief Pushes a new element to the front of the deque.
- *
- * @param d Pointer to the deque
- * @param element Pointer to the element to push
- * @return 0 on success, or 1 if memory allocation fails
- */
-static inline int deque_push_front(deque *d, const void *element)
+int deque_push_front(deque *d, const void *element)
 {
 #ifdef DEQUE_EXTRA_CHECKS
     if (!d || !element)
         return 1;
-#endif // DEQUE_EXTRA_CHECKS
+#endif
 
     deque_node *new_node = (deque_node *)malloc(sizeof(deque_node));
     if (!new_node)
@@ -112,19 +89,12 @@ static inline int deque_push_front(deque *d, const void *element)
     return 0;
 }
 
-/**
- * @brief Pushes a new element to the back of the deque.
- *
- * @param d Pointer to the deque
- * @param element Pointer to the element to push
- * @return 0 on success, or 1 if memory allocation fails
- */
-static inline int deque_push_back(deque *d, const void *element)
+int deque_push_back(deque *d, const void *element)
 {
 #ifdef DEQUE_EXTRA_CHECKS
     if (!d || !element)
         return 1;
-#endif // DEQUE_EXTRA_CHECKS
+#endif
 
     deque_node *new_node = (deque_node *)malloc(sizeof(deque_node));
     if (!new_node)
@@ -152,17 +122,12 @@ static inline int deque_push_back(deque *d, const void *element)
     return 0;
 }
 
-/**
- * @brief Removes the front element from the deque.
- *
- * @param d Pointer to the deque
- */
-static inline void deque_pop_front(deque *d)
+void deque_pop_front(deque *d)
 {
 #ifdef DEQUE_EXTRA_CHECKS
     if (!d || d->size == 0)
         return;
-#endif // DEQUE_EXTRA_CHECKS
+#endif
 
     if (!d->head)
         return;
@@ -180,17 +145,12 @@ static inline void deque_pop_front(deque *d)
     d->size--;
 }
 
-/**
- * @brief Removes the last element from the deque.
- *
- * @param d Pointer to the deque
- */
-static inline void deque_pop_back(deque *d)
+void deque_pop_back(deque *d)
 {
 #ifdef DEQUE_EXTRA_CHECKS
     if (!d || d->size == 0)
         return;
-#endif // DEQUE_EXTRA_CHECKS
+#endif
 
     if (!d->tail)
         return;
@@ -208,34 +168,22 @@ static inline void deque_pop_back(deque *d)
     d->size--;
 }
 
-/**
- * @brief Returns a pointer to the front element of the deque.
- *
- * @param d Pointer to the deque
- * @return Pointer to the front element, or NULL if empty
- */
-static inline void *deque_front(deque *d)
+void *deque_front(deque *d)
 {
 #ifdef DEQUE_EXTRA_CHECKS
     if (!d || d->size == 0)
         return NULL;
-#endif // DEQUE_EXTRA_CHECKS
+#endif
 
     return d->head ? d->head->data : NULL;
 }
 
-/**
- * @brief Returns a pointer to the last element of the deque.
- *
- * @param d Pointer to the deque
- * @return Pointer to the last element, or NULL if empty
- */
-static inline void *deque_back(deque *d)
+void *deque_back(deque *d)
 {
 #ifdef DEQUE_EXTRA_CHECKS
     if (!d || d->size == 0)
         return NULL;
-#endif // DEQUE_EXTRA_CHECKS
+#endif
 
     return d->tail ? d->tail->data : NULL;
 }
