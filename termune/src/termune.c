@@ -75,7 +75,7 @@ int main(int argc, char const *argv[])
             .max_rock_hardness = 192,
 
             .rock_hardness_smoothness = 5,
-            .rock_hardness_noise_amount = 500.f,
+            .rock_hardness_noise_amount = 50.f,
         };
 
         printf("Generating from seed: %d\n", rng_seed);

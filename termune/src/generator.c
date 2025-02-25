@@ -432,13 +432,16 @@ int generator_set_rock_hardness(dungeon_data *dungeon, const generator_parameter
     if (params->rock_hardness_noise_amount > 0.f)
     {
         i = 0;
-        uint8_t noisy;
+        int32_t noise;
         for (y = 0; y < DUNGEON_HEIGHT; y++)
         {
             for (x = 0; x < DUNGEON_WIDTH; x++)
             {
-                noisy = (int32_t)(hardness[i] + layered_noise_perlin(x + x_off, 2.f * y + y_off, params->rock_hardness_noise_amount, 0.03f, 4, 0.5f, 2.f));
-                hardness[i++] = VALUE_CLAMP(noisy, 1, 254);
+
+                noise = (int32_t)(layered_noise_perlin(x + x_off, y + y_off, params->rock_hardness_noise_amount, 0.15f, 8, 0.5f, 2.f));
+
+                hardness[i] = VALUE_CLAMP((int32_t)(hardness[i]) + noise, 1, 254);
+                i++;
             }
         }
     }

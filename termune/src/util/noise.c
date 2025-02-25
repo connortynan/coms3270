@@ -1,79 +1,80 @@
 #include "noise.h"
-#include "util/generic_utils.h"
+#include <stdlib.h>
 #include <math.h>
-#include <string.h>
 
-/// Noise permutation table used for seed-dependent noise generation.
-static int noise_permutation[NOISE_PERMUTATION_TABLE_LEN * 2];
+static uint32_t perm[NOISE_PERMUTATION_TABLE_LEN];
+
+static float fade(float t)
+{
+    return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
+static float lerp(float t, float a, float b)
+{
+    return a + t * (b - a);
+}
+
+static float grad(int hash, float x, float y)
+{
+    int h = hash & 3;
+    float u = h < 2 ? x : y;
+    float v = h < 2 ? y : x;
+    return ((h & 1) ? -u : u) + ((h & 2) ? -2.0f * v : 2.0f * v);
+}
 
 void noise_generate_permutation()
 {
     for (int i = 0; i < NOISE_PERMUTATION_TABLE_LEN; i++)
     {
-        noise_permutation[i] = i;
+        perm[i] = i;
     }
 
-    util_shuffle(noise_permutation, NOISE_PERMUTATION_TABLE_LEN, sizeof(*noise_permutation));
-
-    memcpy(&noise_permutation[NOISE_PERMUTATION_TABLE_LEN], noise_permutation, NOISE_PERMUTATION_TABLE_LEN * sizeof(*noise_permutation));
-}
-
-static inline float noise_fade(const float t)
-{
-    return t * t * t * (t * (t * 6 - 15) + 10);
-}
-
-static inline float noise_grad(int hash, float x, float y)
-{
-    int h = hash & 7;
-    float u = h < 4 ? x : y;
-    float v = h < 4 ? y : x;
-    return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
+    for (int i = 0; i < NOISE_PERMUTATION_TABLE_LEN; i++)
+    {
+        int j = rand() % NOISE_PERMUTATION_TABLE_LEN;
+        uint32_t temp = perm[i];
+        perm[i] = perm[j];
+        perm[j] = temp;
+    }
 }
 
 float noise_perlin(float x, float y)
 {
-    int X = ((int)floor(x)) % NOISE_PERMUTATION_TABLE_LEN;
-    if (X < 0)
-        X += NOISE_PERMUTATION_TABLE_LEN;
-
-    int Y = ((int)floor(y)) % NOISE_PERMUTATION_TABLE_LEN;
-    if (Y < 0)
-        Y += NOISE_PERMUTATION_TABLE_LEN;
+    int X = (int)floorf(x) & 255;
+    int Y = (int)floorf(y) & 255;
 
     x -= floorf(x);
     y -= floorf(y);
 
-    float u = noise_fade(x);
-    float v = noise_fade(y);
+    float u = fade(x);
+    float v = fade(y);
 
-    int hash;
-    hash = noise_permutation[(noise_permutation[X + 1] + Y + 1) % NOISE_PERMUTATION_TABLE_LEN];
-    const float t00 = noise_grad(hash, x, y);
+    int aa = perm[X] + Y;
+    int ab = perm[X] + Y + 1;
+    int ba = perm[X + 1] + Y;
+    int bb = perm[X + 1] + Y + 1;
 
-    hash = noise_permutation[(noise_permutation[X + 1] + Y) % NOISE_PERMUTATION_TABLE_LEN];
-    const float t01 = noise_grad(hash, x, y - 1.f);
+    float gradAA = grad(perm[aa], x, y);
+    float gradBA = grad(perm[ba], x - 1, y);
+    float gradAB = grad(perm[ab], x, y - 1);
+    float gradBB = grad(perm[bb], x - 1, y - 1);
 
-    hash = noise_permutation[(noise_permutation[X] + Y + 1) % NOISE_PERMUTATION_TABLE_LEN];
-    const float t10 = noise_grad(hash, x - 1.f, y);
+    float lerpX1 = lerp(u, gradAA, gradBA);
+    float lerpX2 = lerp(u, gradAB, gradBB);
 
-    hash = noise_permutation[(noise_permutation[X] + Y) % NOISE_PERMUTATION_TABLE_LEN];
-    const float t11 = noise_grad(hash, x - 1.f, y - 1.f);
-
-    return util_lerp(u, util_lerp(v, t00, t01), util_lerp(v, t10, t11));
+    return lerp(v, lerpX1, lerpX2);
 }
 
-float layered_noise_perlin(
-    float x, float y,
-    float amplitude, float frequency,
-    int octaves, float persistence, float lacunarity)
+float layered_noise_perlin(float x, float y, float amplitude, float frequency, int octaves, float persistence, float lacunarity)
 {
-    float result = 0.f;
+    float total = 0.0f;
+
     for (int i = 0; i < octaves; i++)
     {
-        result += amplitude * noise_perlin(x * frequency, y * frequency);
+        total += noise_perlin(x * frequency, y * frequency) * amplitude;
         amplitude *= persistence;
         frequency *= lacunarity;
     }
-    return result;
+
+    return total;
 }
