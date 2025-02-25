@@ -4,7 +4,12 @@
 #include <string.h>
 
 /// Clamps a value `x` between `min` and `max`.
-#define VALUE_CLAMP(x, min, max) (((x) < (min)) ? (min) : (((x) > (max)) ? (max) : (x)))
+#define VALUE_CLAMP(x, min, max) ({                 \
+    typeof(x) _x = (x);                             \
+    typeof(min) _min = (min);                       \
+    typeof(max) _max = (max);                       \
+    (_x < _min) ? _min : ((_x > _max) ? _max : _x); \
+})
 
 /**
  * @brief Performs linear interpolation (lerp) between two values.
