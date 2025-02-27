@@ -1,5 +1,24 @@
 ## RECENT AT TOP
 
+2/25/25 - 1:45 PM:
+    - Updated `VALUE_CLAMP` macro
+    - Redid noise algoritm to actually work
+
+2/24/25 - 2:00 PM:
+    - Fixed make tar command
+    - Finished `monster_generate_*_map`
+    - Refactored all util to not be header only anymore
+
+2/23/25 - 1:15 PM:
+    - Added `deque` for BFS (later unused)
+
+2/18/25 - 10:00 PM:
+    -Refactored all of `pathing.h` to be modular
+
+2/17/25 - 2:00 PM:
+    - Added `monster.h` declarations
+    - Implemented `monster_print_distance_map`
+
 2/12/25 - 12:00 AM:
     - Finished `dungeon_deserialize` and tested with test case dungeon files.
 
