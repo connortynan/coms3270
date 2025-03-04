@@ -14,6 +14,10 @@ ifeq ($(DEBUG), 1)
     CFLAGS += -DDEBUG_DEV_FLAGS
 endif
 
+ifneq ($(LOG_FILE), 0)
+	CFLAGS += -DLOG_FILE=$(LOG_FILE)
+endif
+
 all: $(TARGET)
 
 $(TARGET): $(SRC) $(INCLUDES)
