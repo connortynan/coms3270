@@ -39,7 +39,7 @@ void dungeon_display(const dungeon_data *dungeon, const int display_border)
     {
         for (x = 0; x < DUNGEON_WIDTH; x++)
         {
-            output[x][y] = char_map[dungeon->cells[x][y].type];
+            output[x][y] = char_map[dungeon->cell_types[x][y]];
         }
     }
 
@@ -119,18 +119,18 @@ int dungeon_serialize(const dungeon_data *dungeon, FILE *file)
     {
         for (x = 0; x < DUNGEON_WIDTH; x++)
         {
-            if (dungeon->cells[x][y].type == CELL_STAIR_UP)
+            if (dungeon->cell_types[x][y] == CELL_STAIR_UP)
             {
                 pos = ((uint16_t)x << 8) | y;
                 vector_push_back(up_stairs, &pos);
             }
-            else if (dungeon->cells[x][y].type == CELL_STAIR_DOWN)
+            else if (dungeon->cell_types[x][y] == CELL_STAIR_DOWN)
             {
                 pos = ((uint16_t)x << 8) | y;
                 vector_push_back(down_stairs, &pos);
             }
 
-            fwrite(&dungeon->cells[x][y].hardness, sizeof(uint8_t), 1, file);
+            fwrite(&dungeon->cell_types[x][y], sizeof(uint8_t), 1, file);
         }
     }
 
@@ -221,13 +221,14 @@ int dungeon_deserialize(dungeon_data *dungeon, FILE *file)
     fread(&dungeon->pc_y, sizeof(uint8_t), 1, file);
 
     // hardness
+    fread(&dungeon->cell_hardness[0][0], sizeof(uint8_t), DUNGEON_WIDTH * DUNGEON_HEIGHT, file);
+
     for (y = 0; y < DUNGEON_HEIGHT; y++)
     {
         for (x = 0; x < DUNGEON_WIDTH; x++)
         {
-            fread(&dungeon->cells[x][y].hardness, sizeof(uint8_t), 1, file);
             // Fill all >0 to rock, and all =0 to corridors (other 0-hardness cells with overwrite this)
-            dungeon->cells[x][y].type = (dungeon->cells[x][y].hardness > 0) ? CELL_ROCK : CELL_CORRIDOR;
+            dungeon->cell_types[x][y] = (dungeon->cell_hardness[x][y] > 0) ? CELL_ROCK : CELL_CORRIDOR;
         }
     }
 
@@ -256,7 +257,7 @@ int dungeon_deserialize(dungeon_data *dungeon, FILE *file)
         {
             for (y = room_y; y < room_y + room_h; y++)
             {
-                dungeon->cells[x][y].type = CELL_ROOM;
+                dungeon->cell_types[x][y] = CELL_ROOM;
             }
         }
     }
@@ -275,7 +276,7 @@ int dungeon_deserialize(dungeon_data *dungeon, FILE *file)
         stair_x = (pos >> 8) & 0xFF;
         stair_y = (pos) & 0xFF;
 
-        dungeon->cells[stair_x][stair_y].type = CELL_STAIR_UP;
+        dungeon->cell_types[stair_x][stair_y] = CELL_STAIR_UP;
     }
 
     // down stairs
@@ -289,7 +290,7 @@ int dungeon_deserialize(dungeon_data *dungeon, FILE *file)
         stair_x = (pos >> 8) & 0xFF;
         stair_y = (pos) & 0xFF;
 
-        dungeon->cells[stair_x][stair_y].type = CELL_STAIR_DOWN;
+        dungeon->cell_types[stair_x][stair_y] = CELL_STAIR_DOWN;
     }
 
     return 0;

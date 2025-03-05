@@ -73,3 +73,14 @@ void *deque_front(deque *d);
  * @return Pointer to the last element, or NULL if empty
  */
 void *deque_back(deque *d);
+
+/**
+ * @brief Checks if the deque is empty.
+ *
+ * @param d Pointer to the deque
+ * @return 1 if the deque is empty, 0 otherwise
+ *
+ * @note If the deque pointer is NULL, this function should ideally return 1 (empty)
+ *       to avoid dereferencing a null pointer.
+ */
+int deque_empty(deque *d);

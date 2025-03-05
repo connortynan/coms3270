@@ -7,6 +7,7 @@
 #include "dungeon.h"
 #include "generator.h"
 #include "monster.h"
+#include "util/shadowcast.h"
 #include "util/noise.h"
 
 int main(int argc, char const *argv[])
@@ -87,19 +88,29 @@ int main(int argc, char const *argv[])
            "========================================\n");
     dungeon_display(&dungeon, 0);
 
-    monster_distance_map nontunneling;
-    monster_distance_map tunneling;
-    monster_generate_nontunneling_distance_map(&nontunneling, &dungeon);
-    monster_generate_tunneling_distance_map(&tunneling, &dungeon);
+    printf("========================================"
+           "========================================\n");
+
+    lightmap fov;
+    shadowcast_solve_lightmap(&fov, &dungeon);
+    shadowcast_display_lightmap(&fov);
 
     printf("========================================"
            "========================================\n");
-    monster_print_distance_map(&nontunneling, &dungeon);
-    printf("========================================"
-           "========================================\n");
-    monster_print_distance_map(&tunneling, &dungeon);
-    printf("========================================"
-           "========================================\n");
+
+    monster *m = monster_init(0, 0, 0, 0, 0, 0, 0);
+    static const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+    for (int i = 0; i < 16; i++)
+    {
+        m->characteristics.flags = i;
+
+        printf("characteristics flags: %d (%c) // intel: %d, tele: %d, tunn: %d, erra: %d\n",
+               m->characteristics.flags, hex[m->characteristics.flags],
+               m->characteristics.intelligence, m->characteristics.telepathy,
+               m->characteristics.tunneling, m->characteristics.erratic);
+    }
+
+    free(m);
 
     if (save_flag)
     {

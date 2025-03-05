@@ -13,7 +13,7 @@
     - Refactored all util to not be header only anymore
 
 2/23/25 - 1:15 PM:
-    - Added `deque` for BFS (later unused)
+    - Added `deque` for BFS
 
 2/18/25 - 10:00 PM:
     -Refactored all of `pathing.h` to be modular

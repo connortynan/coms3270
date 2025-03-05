@@ -187,3 +187,8 @@ void *deque_back(deque *d)
 
     return d->tail ? d->tail->data : NULL;
 }
+
+int deque_empty(deque *d)
+{
+    return !d || d->size == 0;
+}

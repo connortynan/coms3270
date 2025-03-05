@@ -61,9 +61,10 @@ typedef struct dungeon_room_data
  */
 typedef struct dungeon_data
 {
-    dungeon_cell cells[DUNGEON_WIDTH][DUNGEON_HEIGHT]; /**< Dungeon cell data. Indexed by [x][y] with [0][0] being the top-left corner */
-    dungeon_room_data *rooms;                          /**< Array of rooms that are in the dungeon (null-terminated) */
-    uint16_t num_rooms;                                /**< Number of generated rooms in the dungeon */
+    dungeon_cell_t cell_types[DUNGEON_WIDTH][DUNGEON_HEIGHT]; /**< Dungeon cell type data. Indexed by [x][y] with [0][0] being the top-left corner */
+    uint8_t cell_hardness[DUNGEON_WIDTH][DUNGEON_HEIGHT];     /**< Dungeon cell hardness data. Indexed by [x][y] with [0][0] being the top-left corner */
+    dungeon_room_data *rooms;                                 /**< Array of rooms that are in the dungeon (null-terminated) */
+    uint16_t num_rooms;                                       /**< Number of generated rooms in the dungeon */
 
     uint8_t pc_x, pc_y;
 
