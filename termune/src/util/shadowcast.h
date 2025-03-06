@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include "common.h"
-#include "dungeon.h"
+#include "game_context.h"
 
 /**
  * @typedef lightmap
@@ -11,7 +11,7 @@
  * The lightmap is a 2D array of uint8_t values, corresponding to the dungeon's dimensions.
  * Values are set to `1` for visible tiles and `0` for unseen tiles.
  */
-typedef uint8_t lightmap[DUNGEON_WIDTH][DUNGEON_HEIGHT];
+typedef uint8_t lightmap[DUNGEON_HEIGHT][DUNGEON_WIDTH];
 
 /**
  * @brief Computes the field of view (FOV) using the recursive shadowcasting algorithm.
@@ -28,7 +28,7 @@ typedef uint8_t lightmap[DUNGEON_WIDTH][DUNGEON_HEIGHT];
  * @details This implementation is based on the Python shadowcasting algorithm described in
  * https://www.roguebasin.com/index.php/Python_shadowcasting_implementation.
  */
-int shadowcast_solve_lightmap(lightmap *map, dungeon_data *dungeon);
+int shadowcast_solve_lightmap(lightmap *map, game_context *g);
 
 /**
  * @brief Displays the computed lightmap to the console for debugging.

@@ -3,8 +3,9 @@
 #include <stdint.h>
 
 #include "common.h"
-#include "dungeon.h"
 #include "util/vector.h"
+
+typedef struct game_context game_context;
 
 /**
  * @brief Represents a monster entity in the dungeon.
@@ -51,7 +52,11 @@ monster *monster_init(
     uint8_t x, uint8_t y, uint8_t speed,
     uint8_t intelligence, uint8_t telepathy, uint8_t tunneling, uint8_t erratic);
 
-int monster_update_telepathic_map(dungeon_data *d);
-int monster_update_los_map(dungeon_data *d);
+int monster_update_telepathic_map(game_context *g);
+int monster_update_los_map(game_context *g);
 
-int monster_move(monster *m, dungeon_data *d);
+int monster_move(monster *m, game_context *g);
+
+#ifdef DEBUG_DEV_FLAGS
+void monster_display_los_map();
+#endif

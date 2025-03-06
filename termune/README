@@ -1,9 +1,11 @@
 # termune / coms327 rougelike
 
-Assignment 1.03 - Path Finding
+Assignment 1.04 - Player Character and Monsters
 ---
 
-Outputs the generated dungeon, the distance map for nontunneling monsters, and the distance map for tunneling monsters.
+Plays in the generated dungeon, ending when all monsters are defeated or the player is. Player moves randomly and monsters move based on their characteristics.
+
+NOTE: currently clears your terminal when run, will be fixed when ncurses is utilized!
 
 ---
 
@@ -17,12 +19,13 @@ make
 
 Usage
 ```
-bin/termune [--save] [--load]
+bin/termune [--save] [--load] [--nummon <int>]
 ```
 
 Options:
  - `--save` saves the current dungeon to disk at `~/.rlg327/dungeon`
  - `--load` loads the last saved dungeon from disk at `~/.rlg327/dungeon`
+ - `--nummon <int>` sets the number of monsters in the dungeon (default: 10).
  - Note: both `--save` and `--load` can be used together, which will read from the file and immediate write back to the same file the equivalent data.
 
 ---

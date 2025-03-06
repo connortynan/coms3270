@@ -19,7 +19,7 @@ static const int MULT[4][8] = {
 static int is_blocked(dungeon_data *dungeon, int x, int y)
 {
     return (x < 0 || y < 0 || x >= DUNGEON_WIDTH || y >= DUNGEON_HEIGHT ||
-            dungeon->cell_types[x][y] == CELL_ROCK);
+            dungeon->cell_types[y][x] == CELL_ROCK);
 }
 
 // Mark a tile as visible (only for open space)
@@ -27,7 +27,7 @@ static void set_lit(lightmap *map, int x, int y)
 {
     if (x >= 0 && y >= 0 && x < DUNGEON_WIDTH && y < DUNGEON_HEIGHT)
     {
-        (*map)[x][y] = 1;
+        (*map)[y][x] = 1;
     }
 }
 
@@ -97,17 +97,17 @@ static void cast_light(lightmap *map, dungeon_data *dungeon, int cx, int cy, int
 }
 
 // Main function to compute FOV using shadowcasting
-int shadowcast_solve_lightmap(lightmap *map, dungeon_data *dungeon)
+int shadowcast_solve_lightmap(lightmap *map, game_context *g)
 {
-    int cx = dungeon->pc_x;
-    int cy = dungeon->pc_y;
+    int cx = g->player.x;
+    int cy = g->player.y;
 
     // Reset visibility map
     for (int i = 0; i < DUNGEON_WIDTH; i++)
     {
         for (int j = 0; j < DUNGEON_HEIGHT; j++)
         {
-            (*map)[i][j] = 0; // Mark all as unseen
+            (*map)[j][i] = 0; // Mark all as unseen
         }
     }
 
@@ -117,7 +117,7 @@ int shadowcast_solve_lightmap(lightmap *map, dungeon_data *dungeon)
     // Process each octant
     for (int i = 0; i < 8; i++)
     {
-        cast_light(map, dungeon, cx, cy, 1, 1.0f, 0.0f, FOV_RADIUS,
+        cast_light(map, g->current_dungeon, cx, cy, 1, 1.0f, 0.0f, FOV_RADIUS,
                    MULT[0][i], MULT[1][i], MULT[2][i], MULT[3][i]);
     }
 
@@ -131,7 +131,7 @@ void shadowcast_display_lightmap(lightmap *map)
     {
         for (int x = 0; x < DUNGEON_WIDTH; x++)
         {
-            printf("%c", (*map)[x][y] ? '.' : '#'); // Open space is visible, walls stay hidden
+            printf("%c", (*map)[y][x] ? '.' : '#'); // Open space is visible, walls stay hidden
         }
         printf("\n");
     }

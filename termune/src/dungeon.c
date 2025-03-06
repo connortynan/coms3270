@@ -27,44 +27,49 @@ int dungeon_destroy(dungeon_data *dungeon)
     return 0;
 }
 
-void dungeon_display(const dungeon_data *dungeon, const int display_border)
+void dungeon_generate_display_buffer(const dungeon_data *dungeon, char *result)
 {
     int x, y;
 
     static const char char_map[] = {' ', '.', '#', '>', '<'};
 
-    char output[DUNGEON_WIDTH][DUNGEON_HEIGHT];
-
     for (y = 0; y < DUNGEON_HEIGHT; y++)
     {
         for (x = 0; x < DUNGEON_WIDTH; x++)
         {
-            output[x][y] = char_map[dungeon->cell_types[x][y]];
+            result[x + y * DUNGEON_WIDTH] = char_map[dungeon->cell_types[y][x]];
         }
     }
+}
 
-    output[dungeon->pc_x][dungeon->pc_y] = '@';
+void dungeon_display(const dungeon_data *dungeon, const int display_border)
+{
+    uint8_t x, y;
+
+    char output[DUNGEON_WIDTH * DUNGEON_HEIGHT];
+
+    dungeon_generate_display_buffer(dungeon, output);
 
     if (display_border)
     {
         // Top border
-        output[0][0] = '/';
+        output[0] = '/';
         for (x = 1; x < DUNGEON_WIDTH - 1; x++)
-            output[x][0] = '-';
-        output[DUNGEON_WIDTH - 1][0] = '\\';
+            output[x] = '-';
+        output[DUNGEON_WIDTH - 1] = '\\';
 
         // Side borders
         for (y = 1; y < DUNGEON_HEIGHT - 1; y++)
         {
-            output[0][y] = '|';
-            output[DUNGEON_WIDTH - 1][y] = '|';
+            output[y * DUNGEON_WIDTH] = '|';
+            output[(DUNGEON_WIDTH - 1) + y * DUNGEON_WIDTH] = '|';
         }
 
         // Bottom border
-        output[0][DUNGEON_HEIGHT - 1] = '\\';
+        output[(DUNGEON_HEIGHT - 1) * DUNGEON_WIDTH] = '\\';
         for (x = 1; x < DUNGEON_WIDTH - 1; x++)
-            output[x][DUNGEON_HEIGHT - 1] = '-';
-        output[DUNGEON_WIDTH - 1][DUNGEON_HEIGHT - 1] = '/';
+            output[x + (DUNGEON_HEIGHT - 1) * DUNGEON_WIDTH] = '-';
+        output[(DUNGEON_WIDTH - 1) + (DUNGEON_HEIGHT - 1) * DUNGEON_WIDTH] = '/';
     }
 
     // Display output
@@ -72,19 +77,18 @@ void dungeon_display(const dungeon_data *dungeon, const int display_border)
     {
         for (x = 0; x < DUNGEON_WIDTH; x++)
         {
-
 #ifdef DEBUG_DEV_FLAGS
             // Print hardness by color
-            printf("\033[48;2;%d;127;127m%c\033[0m", dungeon->cells[x][y].hardness, output[x][y]);
+            printf("\033[48;2;%d;127;127m%c\033[0m", dungeon->cell_hardness[y][x], output[x + y * DUNGEON_WIDTH]);
 #else
-            printf("%c", output[x][y]);
+            printf("%c", output[x + y * DUNGEON_WIDTH]);
 #endif // DEBUG_DEV_FLAG
         }
         printf("\n");
     }
 }
 
-int dungeon_serialize(const dungeon_data *dungeon, FILE *file)
+int dungeon_serialize(const dungeon_data *dungeon, FILE *file, uint8_t pc_x, uint8_t pc_y)
 {
     if (!dungeon || !file)
         return 1;
@@ -111,26 +115,26 @@ int dungeon_serialize(const dungeon_data *dungeon, FILE *file)
     fwrite(&file_size, sizeof(uint32_t), 1, file);
 
     // pc coordinates
-    fwrite(&dungeon->pc_x, sizeof(uint8_t), 1, file);
-    fwrite(&dungeon->pc_y, sizeof(uint8_t), 1, file);
+    fwrite(&pc_x, sizeof(uint8_t), 1, file);
+    fwrite(&pc_y, sizeof(uint8_t), 1, file);
 
     // hardness matrix (also gather stair info)
     for (y = 0; y < DUNGEON_HEIGHT; y++)
     {
         for (x = 0; x < DUNGEON_WIDTH; x++)
         {
-            if (dungeon->cell_types[x][y] == CELL_STAIR_UP)
+            if (dungeon->cell_types[y][x] == CELL_STAIR_UP)
             {
                 pos = ((uint16_t)x << 8) | y;
                 vector_push_back(up_stairs, &pos);
             }
-            else if (dungeon->cell_types[x][y] == CELL_STAIR_DOWN)
+            else if (dungeon->cell_types[y][x] == CELL_STAIR_DOWN)
             {
                 pos = ((uint16_t)x << 8) | y;
                 vector_push_back(down_stairs, &pos);
             }
 
-            fwrite(&dungeon->cell_types[x][y], sizeof(uint8_t), 1, file);
+            fwrite(&dungeon->cell_types[y][x], sizeof(uint8_t), 1, file);
         }
     }
 
@@ -186,7 +190,7 @@ int dungeon_serialize(const dungeon_data *dungeon, FILE *file)
     return 0;
 }
 
-int dungeon_deserialize(dungeon_data *dungeon, FILE *file)
+int dungeon_deserialize(dungeon_data *dungeon, FILE *file, uint8_t *pc_x, uint8_t *pc_y)
 {
     if (!dungeon || !file)
         return 1;
@@ -217,8 +221,8 @@ int dungeon_deserialize(dungeon_data *dungeon, FILE *file)
     file_size = be32toh(file_size);
 
     // pc coordinates
-    fread(&dungeon->pc_x, sizeof(uint8_t), 1, file);
-    fread(&dungeon->pc_y, sizeof(uint8_t), 1, file);
+    fread(pc_x, sizeof(uint8_t), 1, file);
+    fread(pc_y, sizeof(uint8_t), 1, file);
 
     // hardness
     fread(&dungeon->cell_hardness[0][0], sizeof(uint8_t), DUNGEON_WIDTH * DUNGEON_HEIGHT, file);
@@ -228,7 +232,7 @@ int dungeon_deserialize(dungeon_data *dungeon, FILE *file)
         for (x = 0; x < DUNGEON_WIDTH; x++)
         {
             // Fill all >0 to rock, and all =0 to corridors (other 0-hardness cells with overwrite this)
-            dungeon->cell_types[x][y] = (dungeon->cell_hardness[x][y] > 0) ? CELL_ROCK : CELL_CORRIDOR;
+            dungeon->cell_types[y][x] = (dungeon->cell_hardness[y][x] > 0) ? CELL_ROCK : CELL_CORRIDOR;
         }
     }
 
@@ -257,7 +261,7 @@ int dungeon_deserialize(dungeon_data *dungeon, FILE *file)
         {
             for (y = room_y; y < room_y + room_h; y++)
             {
-                dungeon->cell_types[x][y] = CELL_ROOM;
+                dungeon->cell_types[y][x] = CELL_ROOM;
             }
         }
     }
@@ -276,7 +280,7 @@ int dungeon_deserialize(dungeon_data *dungeon, FILE *file)
         stair_x = (pos >> 8) & 0xFF;
         stair_y = (pos) & 0xFF;
 
-        dungeon->cell_types[stair_x][stair_y] = CELL_STAIR_UP;
+        dungeon->cell_types[stair_y][stair_x] = CELL_STAIR_UP;
     }
 
     // down stairs
@@ -290,7 +294,7 @@ int dungeon_deserialize(dungeon_data *dungeon, FILE *file)
         stair_x = (pos >> 8) & 0xFF;
         stair_y = (pos) & 0xFF;
 
-        dungeon->cell_types[stair_x][stair_y] = CELL_STAIR_DOWN;
+        dungeon->cell_types[stair_y][stair_x] = CELL_STAIR_DOWN;
     }
 
     return 0;

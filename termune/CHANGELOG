@@ -1,5 +1,24 @@
 ## RECENT AT TOP
 
+3/6/25 - 2:45 PM
+    - Fixed game rendering when player dies
+    
+3/6/25 - 1:45 PM:
+    - Fixed bug where player couldn't kill monsters
+    - Added line-of-sight map viewing for debugging
+
+3/5/25 - 10:15 PM:
+    - Fixed indexing in `lightmap.c`
+
+3/5/25 - 8:00 PM:
+    - Finished event queue management and flag parsing
+
+3/5/25 - 4:00 PM:
+    - Added `game_context` to keep track of game data
+
+3/4/25 - 1:00 PM:
+    - Added monsst monster movement logic
+
 2/27/25 - 1:00 PM:
     - Added `logging.h` to write to a log file
 

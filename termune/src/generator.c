@@ -205,10 +205,10 @@ int _generator_connect_rooms(dungeon_data *dungeon)
             x = *idx % DUNGEON_WIDTH;
             y = *idx / DUNGEON_WIDTH;
 
-            if (dungeon->cell_types[x][y] == CELL_ROCK)
+            if (dungeon->cell_types[y][x] == CELL_ROCK)
             {
-                dungeon->cell_types[x][y] = CELL_CORRIDOR;
-                dungeon->cell_hardness[x][y] = 0;
+                dungeon->cell_types[y][x] = CELL_CORRIDOR;
+                dungeon->cell_hardness[y][x] = 0;
             }
         }
         vector_destroy(path);
@@ -233,7 +233,7 @@ int generator_generate_dungeon(dungeon_data *dungeon, const generator_parameters
     {
         for (x = 0; x < DUNGEON_WIDTH; x++)
         {
-            dungeon->cell_types[x][y] = CELL_ROCK;
+            dungeon->cell_types[y][x] = CELL_ROCK;
         }
     }
 
@@ -243,17 +243,6 @@ int generator_generate_dungeon(dungeon_data *dungeon, const generator_parameters
 
     while (_generator_place_rooms(dungeon, params))
         ;
-
-    if (dungeon->num_rooms > 0)
-    {
-        dungeon->pc_x = dungeon->rooms[0].center_x;
-        dungeon->pc_y = dungeon->rooms[0].center_y;
-    }
-    else
-    {
-        dungeon->pc_x = 1;
-        dungeon->pc_y = 1;
-    }
 
     dungeon->rooms = (dungeon_room_data *)realloc(dungeon->rooms, dungeon->num_rooms * sizeof(dungeon_room_data *));
     if (!dungeon->rooms)
@@ -271,9 +260,9 @@ int generator_generate_dungeon(dungeon_data *dungeon, const generator_parameters
         {
             x = rand() % DUNGEON_WIDTH;
             y = rand() % DUNGEON_HEIGHT;
-        } while (dungeon->cell_types[x][y] == CELL_ROCK);
-        dungeon->cell_types[x][y] = stair_direction ? CELL_STAIR_DOWN : CELL_STAIR_UP;
-        dungeon->cell_hardness[x][y] = 0;
+        } while (dungeon->cell_types[y][x] == CELL_ROCK);
+        dungeon->cell_types[y][x] = stair_direction ? CELL_STAIR_DOWN : CELL_STAIR_UP;
+        dungeon->cell_hardness[y][x] = 0;
         stair_direction ^= 1;
     }
 
@@ -291,8 +280,8 @@ int generator_apply_room(dungeon_data *dungeon, const dungeon_room_data *room_da
     {
         for (dy = 0; dy < room_data->height; dy++)
         {
-            dungeon->cell_types[x + dx][y + dy] = CELL_ROOM;
-            dungeon->cell_hardness[x + dx][y + dy] = 0;
+            dungeon->cell_types[y + dy][x + dx] = CELL_ROOM;
+            dungeon->cell_hardness[y + dy][x + dx] = 0;
         }
     }
 
@@ -310,7 +299,7 @@ int generator_undo_room(dungeon_data *dungeon, const dungeon_room_data *room_dat
     {
         for (dy = 0; dy < room_data->height; dy++)
         {
-            dungeon->cell_types[x + dx][y + dy] = CELL_ROCK;
+            dungeon->cell_types[y + dy][x + dx] = CELL_ROCK;
         }
     }
 
@@ -437,20 +426,20 @@ int generator_set_rock_hardness(dungeon_data *dungeon, const generator_parameter
     {
         for (x = 0; x < DUNGEON_WIDTH; x++)
         {
-            if (dungeon->cell_types[x][y] == CELL_ROCK)
+            if (dungeon->cell_types[y][x] == CELL_ROCK)
             {
                 if (x == 0 || x == DUNGEON_WIDTH - 1 || y == 0 || y == DUNGEON_HEIGHT - 1) // Put hardness of 255 on the border
                 {
-                    dungeon->cell_hardness[x][y] = 255;
+                    dungeon->cell_hardness[y][x] = 255;
                 }
                 else
                 {
-                    dungeon->cell_hardness[x][y] = hardness[i];
+                    dungeon->cell_hardness[y][x] = hardness[i];
                 }
             }
             else
             {
-                dungeon->cell_hardness[x][y] = 0;
+                dungeon->cell_hardness[y][x] = 0;
             }
             i++;
         }

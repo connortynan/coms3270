@@ -1,11 +1,12 @@
 #include "monster.h"
 
 #include "dungeon.h"
+#include "game_context.h"
 #include "util/pathing.h"
 #include "util/vector.h"
 #include "util/shadowcast.h"
 
-typedef uint32_t monster_distance_map[DUNGEON_WIDTH][DUNGEON_HEIGHT];
+typedef uint32_t monster_distance_map[DUNGEON_HEIGHT][DUNGEON_WIDTH];
 
 static monster_distance_map tunneling, nontunneling;
 static lightmap los_map;
@@ -44,7 +45,7 @@ void _monster_distmap_pathing_neighbors(size_t node_idx, pathing_context *ctx)
     }
 
     monster_distance_map *m = (monster_distance_map *)ctx->data;
-    (*m)[x][y] = ctx->nodes[node_idx].cost;
+    (*m)[y][x] = ctx->nodes[node_idx].cost;
 }
 
 int _monster_distmap_pathing_end_condition(size_t node_idx, pathing_context *ctx)
@@ -56,13 +57,14 @@ int _monster_distmap_pathing_end_condition(size_t node_idx, pathing_context *ctx
 int monster_generate_generic_distance_map(
     monster_distance_map *dist_map,
     dungeon_data *dungeon,
-    uint8_t *weights)
+    uint8_t *weights,
+    uint8_t origin_x, uint8_t origin_y)
 {
     // Set all distances to UINT32_MAX (unreachable)
     // Then overwrite the reachable nodes
     memset(dist_map, 0xFF, sizeof(uint32_t) * DUNGEON_WIDTH * DUNGEON_HEIGHT);
 
-    size_t start_idx = dungeon->pc_x + dungeon->pc_y * DUNGEON_WIDTH;
+    size_t start_idx = origin_x + origin_y * DUNGEON_WIDTH;
     vector *path;
     path = pathing_solve(start_idx, DUNGEON_WIDTH * DUNGEON_HEIGHT,
                          weights, sizeof(uint8_t),
@@ -88,7 +90,7 @@ static uint8_t *monster_generate_nontunneling_weight_map(dungeon_data *dungeon)
     {
         for (x = 0; x < DUNGEON_WIDTH; x++)
         {
-            result[i++] = (dungeon->cell_types[x][y] == CELL_ROCK) ? 255 : 0;
+            result[i++] = (dungeon->cell_types[y][x] == CELL_ROCK) ? 255 : 0;
         }
     }
 
@@ -97,16 +99,22 @@ static uint8_t *monster_generate_nontunneling_weight_map(dungeon_data *dungeon)
 
 int monster_generate_nontunneling_distance_map(
     monster_distance_map *dist_map,
-    dungeon_data *dungeon)
+    dungeon_data *dungeon,
+    uint8_t origin_x, uint8_t origin_y)
 {
-    return monster_generate_generic_distance_map(dist_map, dungeon, monster_generate_nontunneling_weight_map(dungeon));
+    return monster_generate_generic_distance_map(
+        dist_map, dungeon,
+        monster_generate_nontunneling_weight_map(dungeon), origin_x, origin_y);
 }
 
 int monster_generate_tunneling_distance_map(
     monster_distance_map *dist_map,
-    dungeon_data *dungeon)
+    dungeon_data *dungeon,
+    uint8_t origin_x, uint8_t origin_y)
 {
-    return monster_generate_generic_distance_map(dist_map, dungeon, &dungeon->cell_hardness[0][0]);
+    return monster_generate_generic_distance_map(
+        dist_map, dungeon,
+        &dungeon->cell_hardness[0][0], origin_x, origin_y);
 }
 
 monster *monster_init(
@@ -135,18 +143,18 @@ monster *monster_init(
     return m;
 }
 
-int monster_update_telepathic_map(dungeon_data *d)
+int monster_update_telepathic_map(game_context *g)
 {
-    if (monster_generate_tunneling_distance_map(&tunneling, d))
+    if (monster_generate_tunneling_distance_map(&tunneling, g->current_dungeon, g->player.x, g->player.y))
         return 1;
-    if (monster_generate_nontunneling_distance_map(&nontunneling, d))
+    if (monster_generate_nontunneling_distance_map(&nontunneling, g->current_dungeon, g->player.x, g->player.y))
         return 1;
     return 0;
 }
 
-int monster_update_los_map(dungeon_data *d)
+int monster_update_los_map(game_context *g)
 {
-    return shadowcast_solve_lightmap(&los_map, d);
+    return shadowcast_solve_lightmap(&los_map, g);
 }
 
 uint64_t _monster_pathing_cost_eval(size_t node_idx, pathing_context *ctx)
@@ -172,7 +180,6 @@ void _monster_pathing_neighbors(size_t node_idx, pathing_context *ctx)
     uint8_t y = node_idx / DUNGEON_WIDTH;
 
     uint8_t nx, ny;
-    size_t nidx;
     for (uint8_t i = 0; i < num_nbors; i++)
     {
         nx = x + nbor_offsets[i][0];
@@ -188,9 +195,9 @@ int _monster_pathing_end_condition(size_t node_idx, pathing_context *ctx)
 }
 
 /**
- * 0000 - .... 0
+ * \ 0000 - .... 0
  * \ 0001 - ...L L
- * 0010 - ..t. 0
+ * \ 0010 - ..t. 0
  * \ 0011 - ..tL L
  * \ 0100 - .T.. L
  * \ 0101 - .T.L L
@@ -199,7 +206,7 @@ int _monster_pathing_end_condition(size_t node_idx, pathing_context *ctx)
  *
  * \ 1000 - I... L
  * \ 1001 - I..L L
- * \ 1010 - I.t. p
+ * \ 1010 - I.t. L
  * \ 1011 - I.tL L
  * \ 1100 - IT.. d
  * \ 1101 - IT.L L
@@ -275,12 +282,12 @@ static void monster_select_target(monster *m, uint8_t *x, uint8_t *y, dungeon_da
             uint8_t i = rand() % 8;
             int min_idx = i;
             int *nbor_pos = &nbors[i][0];
-            uint32_t min_dist = (*dist_map)[nbor_pos[0]][nbor_pos[1]];
+            uint32_t min_dist = (*dist_map)[nbor_pos[1]][nbor_pos[0]];
             uint32_t dist;
             for (uint8_t di = 1; di < 8; di++)
             {
                 nbor_pos = &nbors[(i + di) % 8][0];
-                dist = (*dist_map)[nbor_pos[0]][nbor_pos[1]];
+                dist = (*dist_map)[nbor_pos[1]][nbor_pos[0]];
                 if (dist < min_dist)
                 {
                     min_idx = (i + di) % 8;
@@ -292,22 +299,7 @@ static void monster_select_target(monster *m, uint8_t *x, uint8_t *y, dungeon_da
             *y = nbor_pos[1];
             return;
         }
-        else if (m->characteristics.tunneling) // non-telepathic, intelligent, nontunneling: recalculate path
-        {
-            size_t goal_idx = m->target_x + m->target_y * DUNGEON_WIDTH;
-
-            vector *path = pathing_solve(m->x + m->y * DUNGEON_WIDTH, DUNGEON_WIDTH * DUNGEON_HEIGHT,
-                                         &d->cell_hardness[0][0], sizeof(uint8_t), &goal_idx,
-                                         _monster_pathing_cost_eval, _monster_pathing_neighbors, _monster_pathing_end_condition);
-
-            if (!path)
-                return;
-            size_t *next_idx = vector_at(path, 1);
-            *x = *next_idx % DUNGEON_WIDTH;
-            *y = *next_idx / DUNGEON_WIDTH;
-            return;
-        }
-        else // intelligent, nontele w/o tunneling, move towards target if ever seen
+        else // intelligent, nontele, move towards target if ever seen
         {
             if (m->target_x == UINT8_MAX || m->target_y == UINT8_MAX)
                 return; // else stand still
@@ -325,44 +317,72 @@ static void monster_select_target(monster *m, uint8_t *x, uint8_t *y, dungeon_da
     // else dumb nontelepathic monster w/o los, stand still
 }
 
-int monster_move(monster *m, dungeon_data *d)
+int monster_move(monster *m, game_context *g)
 {
     uint8_t desired_x, desired_y;
 
     // update with new line of sight
     m->has_los = 0;
-    if (m->characteristics.telepathy || los_map[m->x][m->y])
+    if (m->characteristics.telepathy || los_map[m->y][m->x])
     {
-        m->target_x = d->pc_x;
-        m->target_y = d->pc_y;
+        m->target_x = g->player.x;
+        m->target_y = g->player.y;
 
-        m->has_los = los_map[m->x][m->y];
+        m->has_los = los_map[m->y][m->x];
     }
 
-    monster_select_target(m, &desired_x, &desired_y, d);
+    monster_select_target(m, &desired_x, &desired_y, g->current_dungeon);
 
-    if (d->cell_types[desired_x][desired_y] != CELL_ROCK)
+    if (desired_x == m->x && desired_y == m->y)
+        return 0;
+    int64_t overlapping_entity = game_entity_id_at(g, desired_x, desired_y);
+
+    if (desired_x < DUNGEON_WIDTH && desired_y < DUNGEON_HEIGHT)
     {
-        m->x = desired_x;
-        m->y = desired_y;
-    }
-    else if (m->characteristics.tunneling)
-    {
-        int16_t new_hardness = (int16_t)d->cell_hardness - 85;
-        if (new_hardness < 0)
+        if (g->current_dungeon->cell_types[desired_y][desired_x] != CELL_ROCK)
         {
-            d->cell_types[desired_x][desired_y] = CELL_CORRIDOR;
-            d->cell_hardness[desired_x][desired_y] = 0;
             m->x = desired_x;
             m->y = desired_y;
         }
-        else
+        else if (m->characteristics.tunneling && g->current_dungeon->cell_hardness[desired_y][desired_x] < 255)
         {
-            d->cell_hardness[desired_x][desired_y] = new_hardness;
+            int16_t new_hardness = (int16_t)g->current_dungeon->cell_hardness[desired_y][desired_x] - 85;
+            if (new_hardness < 0)
+            {
+                g->current_dungeon->cell_types[desired_y][desired_x] = CELL_CORRIDOR;
+                g->current_dungeon->cell_hardness[desired_y][desired_x] = 0;
+                m->x = desired_x;
+                m->y = desired_y;
+                monster_update_los_map(g);
+            }
+            else
+            {
+                g->current_dungeon->cell_hardness[desired_y][desired_x] = new_hardness;
+            }
+            // recalculate tunneling distance map
+            monster_generate_tunneling_distance_map(&tunneling, g->current_dungeon, g->player.x, g->player.y);
         }
-        // recalculate tunneling distance map
-        monster_generate_tunneling_distance_map(&tunneling, d);
+        else // can't move
+            return 0;
+    }
+    if (overlapping_entity >= 0 && overlapping_entity < g->num_monsters)
+    {
+        g->monsters[overlapping_entity].alive = 0;
+        return 0;
     }
 
-    // kill overlapping monsters
+    if (overlapping_entity == PLAYER_ENTITY_ID)
+    {
+        g->player.alive = 0;
+        return 0;
+    }
+
+    return 0;
 }
+
+#ifdef DEBUG_DEV_FLAGS
+void monster_display_los_map()
+{
+    shadowcast_display_lightmap(&los_map);
+}
+#endif

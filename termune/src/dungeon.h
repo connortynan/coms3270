@@ -61,12 +61,10 @@ typedef struct dungeon_room_data
  */
 typedef struct dungeon_data
 {
-    dungeon_cell_t cell_types[DUNGEON_WIDTH][DUNGEON_HEIGHT]; /**< Dungeon cell type data. Indexed by [x][y] with [0][0] being the top-left corner */
-    uint8_t cell_hardness[DUNGEON_WIDTH][DUNGEON_HEIGHT];     /**< Dungeon cell hardness data. Indexed by [x][y] with [0][0] being the top-left corner */
+    dungeon_cell_t cell_types[DUNGEON_HEIGHT][DUNGEON_WIDTH]; /**< Dungeon cell type data. Indexed by [y][x] with [0][0] being the top-left corner */
+    uint8_t cell_hardness[DUNGEON_HEIGHT][DUNGEON_WIDTH];     /**< Dungeon cell hardness data. Indexed by [y][x] with [0][0] being the top-left corner */
     dungeon_room_data *rooms;                                 /**< Array of rooms that are in the dungeon (null-terminated) */
     uint16_t num_rooms;                                       /**< Number of generated rooms in the dungeon */
-
-    uint8_t pc_x, pc_y;
 
     struct dungeon_data *north; /**< Pointer to the northern dungeon. */
     struct dungeon_data *east;  /**< Pointer to the eastern dungeon. */
@@ -90,6 +88,14 @@ typedef enum world_direction
     DIRECTION_UP,    /**< Represents the upwards direction. */
     DIRECTION_DOWN   /**< Represents the downwards direction. */
 } world_direction;
+
+/**
+ * Write dungeon display data to a character buffer
+ *
+ * @param dungeon the dungeon we want to display
+ * @param result pre allocated flattened character buffer
+ */
+void dungeon_generate_display_buffer(const dungeon_data *dungeon, char *result);
 
 /**
  * Displays a dungeon to the command line
@@ -120,7 +126,7 @@ int dungeon_destroy(dungeon_data *dungeon);
  * @param file File pointer to the file where the dungeon will be written.
  * @return Returns 0 on success, or a non-zero value if an error occurs.
  */
-int dungeon_serialize(const dungeon_data *dungeon, FILE *file);
+int dungeon_serialize(const dungeon_data *dungeon, FILE *file, uint8_t pc_x, uint8_t pc_y);
 
 /**
  * @brief Deserializes a dungeon's data from a file.
@@ -131,4 +137,4 @@ int dungeon_serialize(const dungeon_data *dungeon, FILE *file);
  * @param file File pointer to the file from which the dungeon will be read.
  * @return Returns 0 on success, or a non-zero value if an error occurs.
  */
-int dungeon_deserialize(dungeon_data *dungeon, FILE *file);
+int dungeon_deserialize(dungeon_data *dungeon, FILE *file, uint8_t *pc_x, uint8_t *pc_y);
