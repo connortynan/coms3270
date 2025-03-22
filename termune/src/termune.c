@@ -9,6 +9,7 @@
 #include "generator.h"
 #include "monster.h"
 #include "game_context.h"
+#include "ui.h"
 #include "util/noise.h"
 #include "util/heap.h"
 
@@ -100,13 +101,8 @@ int main(int argc, char const *argv[])
 
     game_context *game = game_init(&dungeon, num_mon, pc_x, pc_y);
 
-    game_event event = {
-        .entity_id = PLAYER_ENTITY_ID,
-        .turn_id = 1000 / game->player.speed};
-
-    heap_insert(game->event_queue, &event);
     // begin the queue for every monster
-
+    game_event event = {};
     for (int i = 0; i < game->num_monsters; i++)
     {
         event.entity_id = i;
@@ -114,43 +110,63 @@ int main(int argc, char const *argv[])
         heap_insert(game->event_queue, &event);
     }
 
-    static const char *hex = "0123456789abcdef";
+    ui_init();
+
     while (game->running)
     {
-        game->running = (game->player.alive && game_monster_alive(game));
+        ui_draw_dungeon(game);
+
+        ui_command cmd = ui_get_player_input();
+
+        switch (cmd)
+        {
+        case CMD_MOVE_NW:
+            player_move(game, -1, -1);
+            break;
+        case CMD_MOVE_N:
+            player_move(game, 0, -1);
+            break;
+        case CMD_MOVE_NE:
+            player_move(game, 1, -1);
+            break;
+        case CMD_MOVE_E:
+            player_move(game, 1, 0);
+            break;
+        case CMD_MOVE_SE:
+            player_move(game, 1, 1);
+            break;
+        case CMD_MOVE_S:
+            player_move(game, 0, 1);
+            break;
+        case CMD_MOVE_SW:
+            player_move(game, -1, 1);
+            break;
+        case CMD_MOVE_W:
+            player_move(game, -1, 0);
+            break;
+        case CMD_STAIRS_UP:
+            // game_use_stairs(game, -1);
+            break;
+        case CMD_STAIRS_DOWN:
+            // game_use_stairs(game, 1);
+            break;
+        case CMD_REST:
+            break; // Do nothing
+        case CMD_MONSTER_LIST:
+            ui_display_monster_list(game);
+            continue;
+        case CMD_QUIT:
+            game->running = 0;
+            continue;
+        default:
+            continue;
+        }
 
         game_process_events(game);
-
-        system("clear");
-        game_display(game, 1);
-
-        printf("%ld\n", heap_size(game->event_queue));
-        for (int i = 0; i < game->num_monsters; i++)
-        {
-            printf(" %c", game->monsters[i].has_los ? '+' : '-');
-        }
-        printf("\n");
-        for (int i = 0; i < game->num_monsters; i++)
-        {
-            printf(" %c", hex[game->monsters[i].characteristics.flags]);
-        }
-        printf("\n");
-
-#ifdef DEBUG_DEV_FLAGS
-        monster_display_los_map();
-#endif
-
-        usleep(2500);
+        game->running = game->alive_monsters > 0 && game->player.alive;
     }
 
-    if (game->player.alive)
-    {
-        printf("YOU WIN!\n");
-    }
-    else
-    {
-        printf("YOU LOSE!\n");
-    }
+    ui_shutdown();
 
     if (save_flag)
     {

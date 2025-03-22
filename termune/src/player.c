@@ -21,22 +21,22 @@ player *player_init(uint8_t x, uint8_t y)
     return p;
 }
 
-int player_handle_move(player *p, game_context *g)
+int player_move(game_context *g, int dx, int dy)
 {
-    uint8_t target_x = p->x;
-    uint8_t target_y = p->y;
+    uint8_t target_x = g->player.x;
+    uint8_t target_y = g->player.y;
 
-    target_x += (rand() % 3) - 1; // += random integer in range [-1, 1]
-    target_y += (rand() % 3) - 1; // += random integer in range [-1, 1]
+    target_x += dx;
+    target_y += dy;
 
-    if (target_x == p->x && target_y == p->y)
+    if (target_x == g->player.x && target_y == g->player.y)
         return 0;
     int64_t overlapping_entity = game_entity_id_at(g, target_x, target_y);
 
     if (g->current_dungeon->cell_types[target_y][target_x] != CELL_ROCK)
     {
-        p->x = target_x;
-        p->y = target_y;
+        g->player.x = target_x;
+        g->player.y = target_y;
     }
     else
     {
@@ -46,6 +46,7 @@ int player_handle_move(player *p, game_context *g)
     if (overlapping_entity >= 0 && overlapping_entity < g->num_monsters)
     {
         g->monsters[overlapping_entity].alive = 0;
+        g->alive_monsters--;
     }
 
     monster_update_telepathic_map(g);

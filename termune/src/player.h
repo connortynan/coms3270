@@ -27,9 +27,7 @@ player *player_init(uint8_t x, uint8_t y);
 
 /**
  * @brief Handles player movement based on input or game logic.
- * @param p Pointer to player who is moving.
- * @param p Pointer to game context containing the player.
  *
  * @return 0 on success, 1 otherwise.
  */
-int player_handle_move(player *p, game_context *g);
+int player_move(game_context *g, int dx, int dy);

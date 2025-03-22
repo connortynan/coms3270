@@ -22,7 +22,7 @@ all: $(TARGET)
 
 $(TARGET): $(SRC) $(INCLUDES)
 	mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) $(SRC) -o $(TARGET) $(LDFLAGS) -lm
+	$(CC) $(CFLAGS) $(SRC) -o $(TARGET) $(LDFLAGS) -lm -lncurses
 
 clean:
 	rm -rf $(BIN_DIR)

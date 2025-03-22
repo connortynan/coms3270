@@ -368,6 +368,7 @@ int monster_move(monster *m, game_context *g)
     if (overlapping_entity >= 0 && overlapping_entity < g->num_monsters)
     {
         g->monsters[overlapping_entity].alive = 0;
+        g->alive_monsters--;
         return 0;
     }
 

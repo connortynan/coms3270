@@ -83,6 +83,7 @@ game_context *game_init(dungeon_data *dungeon, int64_t num_monsters, uint8_t pc_
     }
 
     g->num_monsters = num_monsters;
+    g->alive_monsters = num_monsters;
     g->turn_id = 0; // Start game at turn 0
     g->running = 1; // Game starts running
 
@@ -95,14 +96,8 @@ int run_game_event(game_context *g, int64_t entity_id)
     game_event next_event = {
         .entity_id = entity_id,
         .turn_id = g->turn_id};
-    if (entity_id == PLAYER_ENTITY_ID)
-    {
-        player_handle_move(&g->player, g);
-        monster_update_telepathic_map(g);
-        next_event.turn_id += 1000 / g->player.speed;
-    }
 
-    else if (entity_id >= 0 && entity_id < g->num_monsters)
+    if (entity_id >= 0 && entity_id < g->num_monsters)
     {
         if (!g->monsters[entity_id].alive)
             return 0;
@@ -133,7 +128,7 @@ int game_process_events(game_context *g)
         event = heap_peek(g->event_queue);
     }
 
-    g->turn_id++;
+    g->turn_id += 10;
     return 0;
 }
 
@@ -236,14 +231,4 @@ void game_display(const game_context *g, const int display_border)
         }
         printf("\n");
     }
-}
-
-uint8_t game_monster_alive(const game_context *g)
-{
-    for (int i = 0; i < g->num_monsters; i++)
-    {
-        if (g->monsters[i].alive)
-            return 1;
-    }
-    return 0;
 }

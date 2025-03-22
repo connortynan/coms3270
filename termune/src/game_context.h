@@ -25,6 +25,7 @@ typedef struct game_context
 
     monster *monsters; /**< Array holding `monster` structures representing enemies in the game. */
     int64_t num_monsters;
+    int64_t alive_monsters;
 
     uint8_t running; /**< Game running status: 1 = running, 0 = stopped. */
 
@@ -82,5 +83,3 @@ int64_t game_entity_id_at(game_context *g, uint8_t x, uint8_t y);
 void game_generate_display_buffer(const game_context *g, char *result);
 
 void game_display(const game_context *g, const int display_border);
-
-uint8_t game_monster_alive(const game_context *g);
