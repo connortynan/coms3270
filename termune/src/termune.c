@@ -30,7 +30,6 @@ int main(int argc, char const *argv[])
             perror("Error creating directory");
             return 1;
         }
-        printf("Directory created: %s\n", dir);
     }
 
     int save_flag = 0;
@@ -49,7 +48,7 @@ int main(int argc, char const *argv[])
             num_mon = atoi(argv[i + 1]);
             if (num_mon <= 0)
             {
-                fprintf(stderr, "Invalid number of monsters. Using default (10).\n");
+                // fprintf(stderr, "Invalid number of monsters. Using default (10).\n");
                 num_mon = 10;
             }
             i++;
@@ -61,7 +60,7 @@ int main(int argc, char const *argv[])
     // Get the dungeon (either from file or random seed)
     if (load_flag)
     {
-        printf("Reading from file: %s\n", filename);
+        // printf("Reading from file: %s\n", filename);
         FILE *dungeon_load = fopen(filename, "rb");
         dungeon_deserialize(&dungeon, dungeon_load, &pc_x, &pc_y);
         fclose(dungeon_load);
@@ -93,13 +92,23 @@ int main(int argc, char const *argv[])
             .rock_hardness_noise_amount = 50.f,
         };
 
-        printf("Generating from seed: %d\n", rng_seed);
+        // printf("Generating from seed: %d\n", rng_seed);
         generator_generate_dungeon(&dungeon, &params);
         pc_x = dungeon.rooms[0].center_x;
         pc_y = dungeon.rooms[0].center_y;
     }
 
     game_context *game = game_init(&dungeon, num_mon, pc_x, pc_y);
+
+    if (save_flag)
+    {
+        FILE *dungeon_save = fopen(filename, "wb");
+        dungeon_serialize(&dungeon, dungeon_save, game->player.x, game->player.y);
+        fclose(dungeon_save);
+    }
+
+    fflush(stdout);
+    ui_context *ui = ui_init();
 
     // begin the queue for every monster
     game_event event = {};
@@ -110,72 +119,17 @@ int main(int argc, char const *argv[])
         heap_insert(game->event_queue, &event);
     }
 
-    ui_init();
+    ui_display_title(ui);
+    getch();
 
+    ui_display_game(ui, game);
     while (game->running)
     {
-        ui_draw_dungeon(game);
-
-        ui_command cmd = ui_get_player_input();
-
-        switch (cmd)
-        {
-        case CMD_MOVE_NW:
-            player_move(game, -1, -1);
-            break;
-        case CMD_MOVE_N:
-            player_move(game, 0, -1);
-            break;
-        case CMD_MOVE_NE:
-            player_move(game, 1, -1);
-            break;
-        case CMD_MOVE_E:
-            player_move(game, 1, 0);
-            break;
-        case CMD_MOVE_SE:
-            player_move(game, 1, 1);
-            break;
-        case CMD_MOVE_S:
-            player_move(game, 0, 1);
-            break;
-        case CMD_MOVE_SW:
-            player_move(game, -1, 1);
-            break;
-        case CMD_MOVE_W:
-            player_move(game, -1, 0);
-            break;
-        case CMD_STAIRS_UP:
-            // game_use_stairs(game, -1);
-            break;
-        case CMD_STAIRS_DOWN:
-            // game_use_stairs(game, 1);
-            break;
-        case CMD_REST:
-            break; // Do nothing
-        case CMD_MONSTER_LIST:
-            ui_display_monster_list(game);
-            continue;
-        case CMD_QUIT:
-            game->running = 0;
-            continue;
-        default:
-            continue;
-        }
-
-        game_process_events(game);
-        game->running = game->alive_monsters > 0 && game->player.alive;
+        ui_handle_player_input(ui, game);
+        ui_display_game(ui, game);
     }
 
-    ui_shutdown();
-
-    if (save_flag)
-    {
-        printf("Saving to file: %s\n", filename);
-        FILE *dungeon_save = fopen(filename, "wb");
-        dungeon_serialize(&dungeon, dungeon_save, game->player.x, game->player.y);
-        fclose(dungeon_save);
-    }
-
+    ui_shutdown(ui);
     game_destroy(game);
 
     return 0;
