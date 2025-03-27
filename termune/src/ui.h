@@ -3,6 +3,14 @@
 #include "game_context.h"
 #include <ncurses.h>
 
+#define UI_MESSAGE(ctx, ...)                              \
+    do                                                    \
+    {                                                     \
+        werase((ctx)->message_win);                       \
+        mvwprintw((ctx)->message_win, 0, 0, __VA_ARGS__); \
+        wrefresh((ctx)->message_win);                     \
+    } while (0)
+
 #define UI_STATUS(ctx, ...)                              \
     do                                                   \
     {                                                    \
@@ -13,12 +21,16 @@
 
 typedef struct
 {
+    WINDOW *message_win;
     WINDOW *dungeon_win;
-    WINDOW *status_win;
     WINDOW *monster_win;
+    WINDOW *status_win;
 
     uint8_t show_monster_win;
     uint64_t monster_win_scroll;
+    uint8_t running;
+    uint16_t term_x;
+    uint16_t term_y;
 } ui_context;
 
 typedef enum

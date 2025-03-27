@@ -52,5 +52,5 @@ int player_move(game_context *g, int dx, int dy)
     monster_update_telepathic_map(g);
     monster_update_los_map(g);
 
-    return 0;
+    return 1;
 }

@@ -3,6 +3,7 @@
 #include "dungeon.h"
 #include "player.h"
 #include "monster.h"
+#include "generator.h"
 #include "util/heap.h"
 
 #define PLAYER_ENTITY_ID INT64_MAX
@@ -32,6 +33,8 @@ typedef struct game_context
     heap *event_queue; /**< Priority queue for managing game events. */
 
     uint64_t turn_id; /**< Current turn id for processing event queue */
+
+    generator_parameters *dungeon_gen_params;
 } game_context;
 
 /**
@@ -43,7 +46,10 @@ typedef struct game_context
  * @param num_monsters The number of monsters to generate in the game.
  * @return A pointer to the initialized game context, or NULL on failure.
  */
-game_context *game_init(dungeon_data *dungeon, int64_t num_monsters, uint8_t pc_x, uint8_t pc_y);
+game_context *game_init(int64_t num_monsters, generator_parameters *params);
+
+int game_regenerate_dungeon(game_context *g);
+int game_set_dungeon(game_context *g, dungeon_data *d, uint8_t pc_x, uint8_t pc_y);
 
 int game_add_event(size_t entity_id, uint64_t turn_id);
 

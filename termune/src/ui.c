@@ -1,31 +1,64 @@
 #include "ui.h"
 #include <stdlib.h>
 #include <string.h>
+#include <locale.h>
+#include <unistd.h>
 
-#define STATUS_HEIGHT 1
+#include "dungeon.h"
+
+#define MESSAGE_HEIGHT 1
+#define STATUS_HEIGHT 2
 #define MONSTER_WIN_WIDTH 30
 #define MONSTER_WIN_HEIGHT 10
-#define DEBUG_WIDTH 5
+
+#define COLOR_LGRAY 126
+#define COLOR_DGRAY 127
+
+#define UI_ATTEMPT_PLAYER_MOVE(g, ctx, dx, dy)           \
+    if (!player_move((g), (dx), (dy)))                   \
+    {                                                    \
+        UI_MESSAGE((ctx), "There's a wall in the way!"); \
+        return;                                          \
+    }                                                    \
+    break;
+
+void ui_resize_windows(ui_context *ctx, int term_rows, int term_cols);
 
 ui_context *ui_init()
 {
     ui_context *ctx = (ui_context *)malloc(sizeof(*ctx));
 
+    setlocale(LC_ALL, "");
     initscr();
     raw();
     noecho();
     keypad(stdscr, TRUE);
     curs_set(0);
+    set_escdelay(0);
 
-    int total_width = DUNGEON_WIDTH + DEBUG_WIDTH;
+    // set color pairs for title
+    start_color();
+    use_default_colors();
 
-    ctx->dungeon_win = newwin(DUNGEON_HEIGHT, DUNGEON_WIDTH, 0, 0);
-    ctx->status_win = newwin(STATUS_HEIGHT, total_width, DUNGEON_HEIGHT, 0);
-    ctx->monster_win = NULL;
+    init_color(COLOR_LGRAY, 500, 500, 500);
+    init_color(COLOR_DGRAY, 250, 250, 250);
+
+    init_pair(1, COLOR_WHITE, COLOR_LGRAY); // Top layer
+    init_pair(2, COLOR_LGRAY, COLOR_DGRAY); // Middle layer
+    init_pair(3, COLOR_DGRAY, -1);          // Bottom layer
+
+    ctx->message_win = newwin(MESSAGE_HEIGHT, DUNGEON_WIDTH, 0, 0);
+    ctx->dungeon_win = newwin(DUNGEON_HEIGHT, DUNGEON_WIDTH, MESSAGE_HEIGHT, 0);
+    ctx->status_win = newwin(STATUS_HEIGHT, DUNGEON_WIDTH, MESSAGE_HEIGHT + DUNGEON_HEIGHT, 0);
+    ctx->monster_win = newwin(MONSTER_WIN_HEIGHT, MONSTER_WIN_WIDTH,
+                              (DUNGEON_HEIGHT - MONSTER_WIN_HEIGHT) / 2 + MESSAGE_HEIGHT,
+                              (DUNGEON_WIDTH - MONSTER_WIN_WIDTH) / 2);
 
     ctx->show_monster_win = 0;
     ctx->monster_win_scroll = 0;
+    ctx->running = 1;
 
+    ui_resize_windows(ctx, getmaxy(stdscr), getmaxx(stdscr));
     refresh();
 
     return ctx;
@@ -33,45 +66,98 @@ ui_context *ui_init()
 
 void ui_shutdown(ui_context *ctx)
 {
+    if (ctx->message_win)
+        delwin(ctx->message_win);
     if (ctx->dungeon_win)
         delwin(ctx->dungeon_win);
-    if (ctx->status_win)
-        delwin(ctx->status_win);
     if (ctx->monster_win)
         delwin(ctx->monster_win);
+    if (ctx->status_win)
+        delwin(ctx->status_win);
     endwin();
 
     free(ctx);
 }
 
+void ui_resize_windows(ui_context *ctx, int term_rows, int term_cols)
+{
+    ctx->term_y = term_rows;
+    ctx->term_x = term_cols;
+
+    int total_height = MESSAGE_HEIGHT + DUNGEON_HEIGHT + STATUS_HEIGHT;
+
+    int start_y = (term_rows - total_height > 0) ? (term_rows - total_height) / 2 : 0;
+    int start_x = (term_cols - DUNGEON_WIDTH > 0) ? (term_cols - DUNGEON_WIDTH) / 2 : 0;
+
+    // Calculate new positions
+    int msg_y = start_y;
+    int msg_x = start_x;
+    int dung_y = start_y + MESSAGE_HEIGHT;
+    int dung_x = start_x;
+    int stat_y = dung_y + DUNGEON_HEIGHT;
+    int stat_x = start_x;
+    int mon_y = dung_y + (DUNGEON_HEIGHT - MONSTER_WIN_HEIGHT) / 2;
+    int mon_x = dung_x + (DUNGEON_WIDTH - MONSTER_WIN_WIDTH) / 2;
+
+    // Move existing windows
+    mvwin(ctx->message_win, msg_y, msg_x);
+    mvwin(ctx->dungeon_win, dung_y, dung_x);
+    mvwin(ctx->status_win, stat_y, stat_x);
+    mvwin(ctx->monster_win, mon_y, mon_x);
+
+    // Force resize of windows to avoid clipping
+    wresize(ctx->message_win, MESSAGE_HEIGHT, DUNGEON_WIDTH);
+    wresize(ctx->dungeon_win, DUNGEON_HEIGHT, DUNGEON_WIDTH);
+    wresize(ctx->status_win, STATUS_HEIGHT, DUNGEON_WIDTH);
+    wresize(ctx->monster_win, MONSTER_WIN_HEIGHT, MONSTER_WIN_WIDTH);
+}
+
+int ui_check_resize(ui_context *ctx)
+{
+    int new_y, new_x;
+    getmaxyx(stdscr, new_y, new_x);
+
+    if (ctx->term_x != new_x || ctx->term_y != new_y)
+    {
+        ui_resize_windows(ctx, new_y, new_x);
+        clear();
+        refresh();
+        return 1;
+    }
+
+    return 0;
+}
+
 void ui_display_title(ui_context *ctx)
 {
-    static const char *title_art[] = {
-        "@@@@@@@  @@@@@@@@  @@@@@@@   @@@@@@@@@@   @@@  @@@  @@@  @@@  @@@@@@@@",
-        "@@@@@@@  @@@@@@@@  @@@@@@@@  @@@@@@@@@@@  @@@  @@@  @@@@ @@@  @@@@@@@@",
-        "  @@!    @@!       @@!  @@@  @@! @@! @@!  @@!  @@@  @@!@!@@@  @@!     ",
-        "  !@!    !@!       !@!  @!@  !@! !@! !@!  !@!  @!@  !@!!@!@!  !@!     ",
-        "  @!!    @!!!:!    @!@!!@!   @!! !!@ @!@  @!@  !@!  @!@ !!@!  @!!!:!  ",
-        "  !!!    !!!!!:    !!@!@!    !@!   ! !@!  !@!  !!!  !@!  !!!  !!!!!:  ",
-        "  !!:    !!:       !!: :!!   !!:     !!:  !!:  !!!  !!:  !!!  !!:     ",
-        "  :!:    :!:       :!:  !:!  :!:     :!:  :!:  !:!  :!:  !:!  :!:     ",
-        "   ::     :: ::::  ::   :::  :::     ::   ::::: ::   ::   ::   :: ::::",
-        "   :     : :: ::    :   : :   :      :     : :  :   ::    :   : :: :: ",
+    static const wchar_t *title_art[3][10] = {
+#include "title.inc"
     };
 
     werase(ctx->dungeon_win);
 
-    for (int y = 0; y < 10; y++)
-    {
-        mvwprintw(ctx->dungeon_win, 3 + y, 5, "%s", title_art[y]);
-    }
-
     mvwprintw(ctx->dungeon_win, 16, 48, "a rougelike by connor tynan");
 
     box(ctx->dungeon_win, 0, 0);
-    wrefresh(ctx->dungeon_win);
 
-    UI_STATUS(ctx, "Press any key to start...");
+    for (int i = 2; i >= 0; i--)
+    {
+        wattron(ctx->dungeon_win, COLOR_PAIR(i + 1));
+        for (int y = 0; y < 10; y++)
+        {
+            const wchar_t *line = title_art[i][y];
+
+            for (int x = 0; line[x] != L'\0'; x++)
+            {
+                if (line[x] != L' ')
+                    mvwaddnwstr(ctx->dungeon_win, 3 + y, x, &line[x], 1);
+            }
+        }
+        wattroff(ctx->dungeon_win, COLOR_PAIR(i + 1));
+    }
+
+    wrefresh(ctx->dungeon_win);
+    UI_MESSAGE(ctx, "Press any key to start...");
 }
 
 void ui_display_dungeon(ui_context *ctx, const game_context *g)
@@ -97,13 +183,6 @@ void ui_display_dungeon(ui_context *ctx, const game_context *g)
 
 void ui_display_monster_list(ui_context *ctx, const game_context *g)
 {
-    if (!ctx->monster_win)
-    {
-        int startx = (DUNGEON_WIDTH - MONSTER_WIN_WIDTH) / 2;
-        int starty = (DUNGEON_HEIGHT - MONSTER_WIN_HEIGHT) / 2;
-        ctx->monster_win = newwin(MONSTER_WIN_HEIGHT, MONSTER_WIN_WIDTH, starty, startx);
-    }
-
     werase(ctx->monster_win);
     box(ctx->monster_win, 0, 0);
     mvwprintw(ctx->monster_win, 0, 2, " Monster List ");
@@ -190,6 +269,14 @@ void ui_handle_player_input(ui_context *ctx, game_context *g)
 {
     ui_command cmd = ui_get_player_input();
 
+    if (ui_check_resize(ctx))
+        return;
+
+    // clear message
+    UI_MESSAGE(ctx, " ");
+
+    // break runs event queue,
+    // return skips event queue
     if (ctx->show_monster_win)
     {
         int visible_rows = MONSTER_WIN_HEIGHT - 2;
@@ -214,7 +301,7 @@ void ui_handle_player_input(ui_context *ctx, game_context *g)
             ctx->monster_win_scroll = 0;
             return;
         case CMD_QUIT:
-            g->running = 0;
+            ctx->running = 0;
             return;
         default:
             return;
@@ -225,40 +312,43 @@ void ui_handle_player_input(ui_context *ctx, game_context *g)
         switch (cmd)
         {
         case CMD_MOVE_NW:
-            player_move(g, -1, -1);
-            break;
+            UI_ATTEMPT_PLAYER_MOVE(g, ctx, -1, -1);
         case CMD_MOVE_N:
-            player_move(g, 0, -1);
-            break;
+            UI_ATTEMPT_PLAYER_MOVE(g, ctx, 0, -1);
         case CMD_MOVE_NE:
-            player_move(g, 1, -1);
-            break;
+            UI_ATTEMPT_PLAYER_MOVE(g, ctx, 1, -1);
         case CMD_MOVE_E:
-            player_move(g, 1, 0);
-            break;
+            UI_ATTEMPT_PLAYER_MOVE(g, ctx, 1, 0);
         case CMD_MOVE_SE:
-            player_move(g, 1, 1);
-            break;
+            UI_ATTEMPT_PLAYER_MOVE(g, ctx, 1, 1);
         case CMD_MOVE_S:
-            player_move(g, 0, 1);
-            break;
+            UI_ATTEMPT_PLAYER_MOVE(g, ctx, 0, 1);
         case CMD_MOVE_SW:
-            player_move(g, -1, 1);
-            break;
+            UI_ATTEMPT_PLAYER_MOVE(g, ctx, -1, 1);
         case CMD_MOVE_W:
-            player_move(g, -1, 0);
-            break;
+            UI_ATTEMPT_PLAYER_MOVE(g, ctx, -1, 0);
         case CMD_STAIRS_UP:
-            break;
+            if (g->current_dungeon->cell_types[g->player.y][g->player.x] == CELL_STAIR_UP)
+            {
+                game_regenerate_dungeon(g);
+                break;
+            }
+            return;
         case CMD_STAIRS_DOWN:
+            if (g->current_dungeon->cell_types[g->player.y][g->player.x] == CELL_STAIR_DOWN)
+            {
+                game_regenerate_dungeon(g);
+                break;
+            }
+            return;
+        case CMD_REST:
             break;
         case CMD_MONSTER_LIST:
             ctx->show_monster_win = 1;
             return;
         case CMD_QUIT:
-            g->running = 0;
+            ctx->running = 0;
             return;
-        case CMD_REST:
         default:
             return;
         }

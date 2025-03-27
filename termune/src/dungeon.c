@@ -31,7 +31,7 @@ void dungeon_generate_display_buffer(const dungeon_data *dungeon, char *result)
 {
     int x, y;
 
-    static const char char_map[] = {' ', '.', '#', '>', '<'};
+    static const char char_map[] = {' ', '.', '#', '<', '>'};
 
     for (y = 0; y < DUNGEON_HEIGHT; y++)
     {

@@ -48,62 +48,60 @@ int main(int argc, char const *argv[])
             num_mon = atoi(argv[i + 1]);
             if (num_mon <= 0)
             {
-                // fprintf(stderr, "Invalid number of monsters. Using default (10).\n");
                 num_mon = 10;
             }
             i++;
         }
     }
-    dungeon_data dungeon;
-    uint8_t pc_x, pc_y;
+
+    generator_parameters params = {
+        .min_num_rooms = 6,
+        .max_num_rooms = 10,
+
+        .min_room_width = 6,
+        .max_room_width = 20,
+
+        .min_room_height = 4,
+        .max_room_height = 10,
+
+        .min_num_stairs = 2,
+        .max_num_stairs = 4,
+
+        .min_rock_hardness = 128,
+        .max_rock_hardness = 192,
+
+        .rock_hardness_smoothness = 5,
+        .rock_hardness_noise_amount = 50.f,
+    };
+
+    int rng_seed = time(NULL);
+
+    srand(rng_seed);
+    noise_generate_permutation();
+
+    game_context *game = game_init(num_mon, &params);
 
     // Get the dungeon (either from file or random seed)
     if (load_flag)
     {
-        // printf("Reading from file: %s\n", filename);
+        dungeon_data *dungeon = (dungeon_data *)malloc(sizeof(*dungeon));
+        uint8_t pc_x, pc_y;
+
         FILE *dungeon_load = fopen(filename, "rb");
-        dungeon_deserialize(&dungeon, dungeon_load, &pc_x, &pc_y);
+        dungeon_deserialize(dungeon, dungeon_load, &pc_x, &pc_y);
         fclose(dungeon_load);
+
+        game_set_dungeon(game, dungeon, pc_x, pc_y);
     }
     else
     {
-        int rng_seed = time(NULL);
-
-        srand(rng_seed);
-        noise_generate_permutation();
-
-        generator_parameters params = {
-            .min_num_rooms = 6,
-            .max_num_rooms = 10,
-
-            .min_room_width = 6,
-            .max_room_width = 20,
-
-            .min_room_height = 4,
-            .max_room_height = 10,
-
-            .min_num_stairs = 2,
-            .max_num_stairs = 4,
-
-            .min_rock_hardness = 128,
-            .max_rock_hardness = 192,
-
-            .rock_hardness_smoothness = 5,
-            .rock_hardness_noise_amount = 50.f,
-        };
-
-        // printf("Generating from seed: %d\n", rng_seed);
-        generator_generate_dungeon(&dungeon, &params);
-        pc_x = dungeon.rooms[0].center_x;
-        pc_y = dungeon.rooms[0].center_y;
+        game_regenerate_dungeon(game);
     }
-
-    game_context *game = game_init(&dungeon, num_mon, pc_x, pc_y);
 
     if (save_flag)
     {
         FILE *dungeon_save = fopen(filename, "wb");
-        dungeon_serialize(&dungeon, dungeon_save, game->player.x, game->player.y);
+        dungeon_serialize(game->current_dungeon, dungeon_save, game->player.x, game->player.y);
         fclose(dungeon_save);
     }
 
@@ -121,12 +119,19 @@ int main(int argc, char const *argv[])
 
     ui_display_title(ui);
     getch();
+    UI_MESSAGE(ui, "Spawned at (%d, %d)", game->player.x, game->player.y);
 
     ui_display_game(ui, game);
-    while (game->running)
+    while (game->running && ui->running)
     {
         ui_handle_player_input(ui, game);
         ui_display_game(ui, game);
+    }
+
+    if (ui->running)
+    {
+        UI_MESSAGE(ui, "%s (Click any button to exit)", game->player.alive ? "YOU WIN!" : "YOU LOSE.");
+        getch();
     }
 
     ui_shutdown(ui);

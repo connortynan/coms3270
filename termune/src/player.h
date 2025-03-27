@@ -28,6 +28,6 @@ player *player_init(uint8_t x, uint8_t y);
 /**
  * @brief Handles player movement based on input or game logic.
  *
- * @return 0 on success, 1 otherwise.
+ * @return 1 if player moves as a result, 0 otherwise
  */
 int player_move(game_context *g, int dx, int dy);

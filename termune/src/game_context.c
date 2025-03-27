@@ -29,33 +29,62 @@ static int event_queue_cmp(const void *a, const void *b, void *context)
     return 0;
 }
 
-game_context *game_init(dungeon_data *dungeon, int64_t num_monsters, uint8_t pc_x, uint8_t pc_y)
+game_context *game_init(int64_t num_monsters, generator_parameters *params)
 {
     game_context *g = (game_context *)malloc(sizeof(game_context));
     if (!g)
         return NULL; // Memory allocation failed
 
-    g->current_dungeon = dungeon;
-    if (!g->current_dungeon)
-    {
-        free(g);
-        return NULL;
-    }
-
-    g->player.x = pc_x;
-    g->player.y = pc_y;
     g->player.speed = 10;
     g->player.alive = 1;
 
     g->monsters = (monster *)malloc(sizeof(monster) * num_monsters);
     if (!g->monsters)
     {
-        dungeon_destroy(g->current_dungeon);
         free(g);
         return NULL; // Monster allocation failed
     }
 
-    for (int i = 0; i < num_monsters; i++)
+    g->event_queue = heap_init(0, sizeof(game_event), event_queue_cmp, NULL);
+    if (!g->event_queue)
+    {
+        free(g);
+        return NULL; // Event queue allocation failed
+    }
+
+    g->num_monsters = num_monsters;
+    g->alive_monsters = num_monsters;
+    g->turn_id = 0; // Start game at turn 0
+    g->running = 1; // Game starts running
+
+    g->dungeon_gen_params = params;
+
+    return g;
+}
+
+int game_regenerate_dungeon(game_context *g)
+{
+    dungeon_data *new_dungeon = (dungeon_data *)malloc(sizeof(*new_dungeon));
+    if (!new_dungeon)
+        return 1;
+    if (generator_generate_dungeon(new_dungeon, g->dungeon_gen_params))
+        return 1;
+    return game_set_dungeon(g, new_dungeon,
+                            new_dungeon->rooms[0].center_x,
+                            new_dungeon->rooms[0].center_y);
+}
+
+int game_set_dungeon(game_context *g, dungeon_data *d, uint8_t pc_x, uint8_t pc_y)
+{
+    if (!d)
+        return 1;
+
+    if (g->current_dungeon)
+        dungeon_destroy(g->current_dungeon);
+
+    g->current_dungeon = d;
+
+    for (int i = 0; i < g->num_monsters; i++)
     {
         uint8_t monster_x, monster_y;
         do
@@ -74,20 +103,10 @@ game_context *game_init(dungeon_data *dungeon, int64_t num_monsters, uint8_t pc_
         g->monsters[i].alive = 1;
     }
 
-    g->event_queue = heap_init(0, sizeof(game_event), event_queue_cmp, NULL);
-    if (!g->event_queue)
-    {
-        dungeon_destroy(g->current_dungeon);
-        free(g);
-        return NULL; // Event queue allocation failed
-    }
+    g->player.x = pc_x;
+    g->player.y = pc_y;
 
-    g->num_monsters = num_monsters;
-    g->alive_monsters = num_monsters;
-    g->turn_id = 0; // Start game at turn 0
-    g->running = 1; // Game starts running
-
-    return g;
+    return 0;
 }
 
 int run_game_event(game_context *g, int64_t entity_id)
@@ -128,7 +147,7 @@ int game_process_events(game_context *g)
         event = heap_peek(g->event_queue);
     }
 
-    g->turn_id += 10;
+    g->turn_id += 100;
     return 0;
 }
 
