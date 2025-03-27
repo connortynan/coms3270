@@ -6,6 +6,10 @@
 
 #include "dungeon.h"
 
+#ifdef USE_WNCURSES
+int mvwaddnwstr(WINDOW *win, int y, int x, const wchar_t *wstr, int n);
+#endif
+
 #define MESSAGE_HEIGHT 1
 #define STATUS_HEIGHT 2
 #define MONSTER_WIN_WIDTH 30
@@ -130,9 +134,15 @@ int ui_check_resize(ui_context *ctx)
 
 void ui_display_title(ui_context *ctx)
 {
+#ifdef USE_WNCURSES
     static const wchar_t *title_art[3][10] = {
 #include "title.inc"
     };
+#else
+    static const char *title_art[3][10] = {
+#include "title.inc.compat"
+    };
+#endif
 
     werase(ctx->dungeon_win);
 
@@ -145,6 +155,7 @@ void ui_display_title(ui_context *ctx)
         wattron(ctx->dungeon_win, COLOR_PAIR(i + 1));
         for (int y = 0; y < 10; y++)
         {
+#ifdef USE_WNCURSES
             const wchar_t *line = title_art[i][y];
 
             for (int x = 0; line[x] != L'\0'; x++)
@@ -152,6 +163,15 @@ void ui_display_title(ui_context *ctx)
                 if (line[x] != L' ')
                     mvwaddnwstr(ctx->dungeon_win, 3 + y, x, &line[x], 1);
             }
+#else
+            const char *line = title_art[i][y];
+
+            for (int x = 0; line[x]; x++)
+            {
+                if (line[x] != ' ')
+                    mvwaddch(ctx->dungeon_win, 3 + y, x, line[x]);
+            }
+#endif
         }
         wattroff(ctx->dungeon_win, COLOR_PAIR(i + 1));
     }

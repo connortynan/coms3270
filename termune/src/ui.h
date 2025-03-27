@@ -1,7 +1,12 @@
 #pragma once
 
-#include "game_context.h"
+#ifdef USE_WNCURSES
+#include <ncursesw/ncurses.h>
+#else
 #include <ncurses.h>
+#endif
+
+#include "game_context.h"
 
 #define UI_MESSAGE(ctx, ...)                              \
     do                                                    \

@@ -1,11 +1,16 @@
 # termune / coms327 rougelike
 
-Assignment 1.04 - Player Character and Monsters
+Assignment 1.05 - User Interface with Ncurses
 ---
 
-Plays in the generated dungeon, ending when all monsters are defeated or the player is. Player moves randomly and monsters move based on their characteristics.
+Now an actual game!
 
-NOTE: currently clears your terminal when run, will be fixed when ncurses is utilized!
+Game controls are identical to the requirements in the spec.
+The game ends when either the player is defeated, or all monsters are defeated.
+
+The windows are centered in the terminal in cases where the terminal size is greater than the expected 80x24.
+
+The `art` directory contains a supplemental python script to aid in converting text art to `#include`-able C code, this script is only ran during compliation, and not runtime.
 
 ---
 
@@ -19,7 +24,7 @@ make
 
 Usage
 ```
-bin/termune [--save] [--load] [--nummon <int>]
+build/bin/termune [--save] [--load] [--nummon <int>]
 ```
 
 Options:

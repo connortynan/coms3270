@@ -1,5 +1,22 @@
 ## RECENT AT TOP
 
+3/26/25 9:30 PM
+    - Added stair support
+    - Refactored gamestate dungeon handling
+    - Added window centering
+    - Updated title screen
+    - Added ascii art formatter script
+    - Updated Makefile to run script
+    - Changed Makefile output to build
+
+3/24/25 - 10:00 PM
+    - Implemented ncurses windows
+    - Added title screen
+
+3/22/25 - 12:00 AM
+    - Converted printing to ncurses
+    - Handled most inputs (all expect stairs)
+
 3/6/25 - 2:45 PM
     - Fixed game rendering when player dies
     
