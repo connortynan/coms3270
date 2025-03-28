@@ -1,4 +1,4 @@
-CC = gcc
+CC = g++
 PKG_CONFIG := pkg-config
 
 SRC_DIR = src
@@ -8,7 +8,7 @@ GEN_DIR = $(BUILD_DIR)/art
 ART_DIR = art
 TAR_DIR = ../tars
 
-SRC = $(shell find $(SRC_DIR) -type f -name "*.c")
+SRC = $(shell find $(SRC_DIR) -type f -name "*.cpp")
 INCLUDES = $(shell find $(SRC_DIR) -type f -name "*.h")
 TARGET = $(BIN_DIR)/termune
 
@@ -19,7 +19,7 @@ ifeq ($(DEBUG), 1)
 	BASE_CFLAGS += -DDEBUG_DEV_FLAGS
 endif
 
-ifneq ($(LOG_FILE), 0)
+ifneq ($(LOG_FILE),)
 	BASE_CFLAGS += -DLOG_FILE=$(LOG_FILE)
 endif
 

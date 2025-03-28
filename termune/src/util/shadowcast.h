@@ -1,42 +1,51 @@
 #pragma once
 
-#include <stdint.h>
-#include "common.h"
-#include "game_context.h"
+#include <cstddef>
+#include "util/grid.h"
 
-/**
- * @typedef lightmap
- * @brief Represents a visibility grid, where each cell is either seen (1) or unseen (0).
- *
- * The lightmap is a 2D array of uint8_t values, corresponding to the dungeon's dimensions.
- * Values are set to `1` for visible tiles and `0` for unseen tiles.
- */
-typedef uint8_t lightmap[DUNGEON_HEIGHT][DUNGEON_WIDTH];
+namespace ShadowCast
+{
+    using Lightmap = Grid<bool>;
 
-/**
- * @brief Computes the field of view (FOV) using the recursive shadowcasting algorithm.
- *
- * This function calculates which tiles are visible from the player's position, storing
- * the results in the provided lightmap. Visibility is blocked by walls (`CELL_ROCK` tiles),
- * ensuring that light does not pass through them.
- *
- * @param map Pointer to the lightmap where visibility data will be stored.
- * @param dungeon Pointer to the dungeon structure containing map data.
- * @return 0 on success.
- *
- * @note The player's position (pc_x, pc_y) is always set as visible.
- * @details This implementation is based on the Python shadowcasting algorithm described in
- * https://www.roguebasin.com/index.php/Python_shadowcasting_implementation.
- */
-int shadowcast_solve_lightmap(lightmap *map, game_context *g);
+    /**
+     * @brief Computes a visibility map using shadowcasting.
+     *
+     * @param solid_map A Grid<bool> where true means the tile blocks light.
+     * @param visible The output Lightmap to be filled (in-place).
+     * @param origin_x The x-coordinate of the light source.
+     * @param origin_y The y-coordinate of the light source.
+     * @param radius Optional maximum light radius (0 = unlimited).
+     *
+     *
+     * @details This implementation is based on the Python shadowcasting algorithm described in
+     * https://www.roguebasin.com/index.php/Python_shadowcasting_implementation.
+     */
+    void update_lightmap(
+        const Grid<bool> &solid_map,
+        Lightmap &visible,
+        std::size_t origin_x,
+        std::size_t origin_y,
+        std::size_t radius = 0);
 
-/**
- * @brief Displays the computed lightmap to the console for debugging.
- *
- * This function prints the visibility map, where `.` represents visible tiles
- * and `#` represents unseen tiles. It is useful for verifying the correctness of
- * the shadowcasting algorithm.
- *
- * @param map Pointer to the lightmap to be displayed.
- */
-void shadowcast_display_lightmap(lightmap *map);
+    /**
+     * @brief Computes and returns a visibility map using shadowcasting.
+     *
+     * @param solid_map A Grid<bool> where true means the tile blocks light.
+     * @param origin_x The x-coordinate of the light source.
+     * @param origin_y The y-coordinate of the light source.
+     * @param radius Optional maximum light radius (0 = unlimited).
+     * @return Lightmap A new visibility map (true = visible).
+     */
+    Lightmap solve_lightmap(
+        const Grid<bool> &solid_map,
+        std::size_t origin_x,
+        std::size_t origin_y,
+        std::size_t radius = 0)
+    {
+        Lightmap result(solid_map.width(), solid_map.height(), 0);
+
+        update_lightmap(solid_map, result, origin_x, origin_y, radius);
+
+        return result;
+    }
+} // namespace ShadowCast

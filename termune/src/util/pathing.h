@@ -1,65 +1,83 @@
 #pragma once
 
-#include <stdint.h>
-#include "util/vector.h"
-#include "util/heap.h"
+#include <vector>
+#include <cstdint>
+#include <limits>
+#include <memory>
 
-typedef struct pathing_node
+namespace Pathing
 {
-    void *data;      /**< Pointer to user-defined data associated with this node. */
-    uint64_t cost;   /**< The accumulated cost to reach this node. */
-    size_t prev_idx; /**< Index of the previous node in the computed path. */
-} pathing_node;
+    /**
+     * Abstract base class for pathfinding nodes.
+     * Users should inherit from this and implement the required virtual functions.
+     */
+    class Node
+    {
+    public:
+        virtual ~Node() = default;
 
-struct pathing_context;
+        uint64_t cost = std::numeric_limits<uint64_t>::max(); /**< Cost to reach this node */
+        size_t prev = SIZE_MAX;                               /**< Index of previous node in path */
 
-/**
- * @brief Evaluates a neighboring node in the pathfinding process.
- *
- * This function calculates the new cost of a neighboring node and updates it
- * if a shorter path is found. If the cost is updated, the neighbor is added
- * to the priority queue.
- *
- * @param current_idx Index of the current node.
- * @param neighbor_idx Index of the neighboring node being evaluated.
- * @param ctx Pointer to the pathing context.
- *
- * @note The user must call this function for each node they want to check within the `pathing_evaluate_neighbors` function
- */
-void pathing_eval_node(size_t current_idx, size_t neighbor_idx, struct pathing_context *ctx);
+        /** Return a list of neighbor indices for this node. */
+        virtual std::vector<size_t> get_neighbors() const = 0;
 
-typedef uint64_t (*pathing_cost_eval_func)(size_t node_idx, struct pathing_context *ctx);
-typedef void (*pathing_evaluate_neighbors)(size_t node_idx, struct pathing_context *ctx);
-typedef int (*pathing_end_condition)(size_t node_idx, struct pathing_context *ctx);
+        /** Return the cost to move from this node to the given neighbor. */
+        virtual uint64_t movement_cost_to(const Node &neighbor) const = 0;
 
-typedef struct pathing_context
-{
-    pathing_node *nodes;                        /**< Array of nodes in the pathfinding graph. */
-    size_t num_nodes;                           /**< Total number of nodes in the graph. */
-    heap *pq;                                   /**< Min-heap used for priority queue operations. */
-    pathing_cost_eval_func cost_eval_func;      /**< Function for calculating movement cost. */
-    pathing_evaluate_neighbors eval_nbors_func; /**< Function for evaluating neighboring nodes. (Must call pathing_eval_nodefor each neighbor you want to check) */
-    pathing_end_condition end_cond_func;        /**< Function to check if the goal node has been reached. */
-    void *data;
-} pathing_context;
+        /** Return true if this node is the goal. */
+        virtual bool is_goal() const = 0;
+    };
 
-/**
- * @brief Function to solve the shortest path problem using a priority queue (Dijkstra's algorithm).
- *
- * @param start_idx Index of the starting node.
- * @param num_nodes Total number of nodes in the graph.
- * @param node_data Pointer to node data (optional).
- * @param node_data_elem_size Size of the data per node element.
- * @param ctx_data Pointer to user-defined context data (optional).
- * @param cost_eval Function to calculate node movement cost.
- * @param eval_neighbors Function to evaluate a node's neighbors. (Must call pathing_eval_node for each neighbor you want to check)
- * @param end_cond Function to check if the goal has been reached.
- * @return A dynamically allocated vector containing the indices of nodes forming the shortest path.
- */
-vector *pathing_solve(
-    size_t start_idx, size_t num_nodes,
-    void *node_data, size_t node_data_elem_size,
-    void *ctx_data,
-    pathing_cost_eval_func cost_eval,
-    pathing_evaluate_neighbors eval_neighbors,
-    pathing_end_condition end_cond);
+    /**
+     * Solves the shortest path from start node using Dijkstra's algorithm.
+     * @param nodes Vector of Node instances (owned via unique_ptr).
+     * @param start_idx Index of the starting node.
+     * @return A list of node indices forming the shortest path.
+     */
+    std::vector<size_t> solve(std::vector<std::unique_ptr<Node>> &nodes, size_t start_idx)
+    {
+        using QueueEntry = std::pair<uint64_t, size_t>; // (cost, index)
+
+        auto cmp = [](const QueueEntry &a, const QueueEntry &b)
+        {
+            return a.first > b.first; // min-heap
+        };
+
+        std::priority_queue<QueueEntry, std::vector<QueueEntry>, decltype(cmp)> pq(cmp);
+
+        nodes[start_idx]->cost = 0;
+        pq.emplace(0, start_idx);
+
+        while (!pq.empty())
+        {
+            auto [curr_cost, curr_idx] = pq.top();
+            pq.pop();
+
+            Node &current = *nodes[curr_idx];
+
+            if (current.is_goal())
+            {
+                std::vector<size_t> path;
+                for (size_t i = curr_idx; i != SIZE_MAX; i = nodes[i]->prev)
+                    path.push_back(i);
+                std::reverse(path.begin(), path.end());
+                return path;
+            }
+
+            for (size_t neighbor_idx : current.get_neighbors())
+            {
+                Node &neighbor = *nodes[neighbor_idx];
+                uint64_t new_cost = current.cost + current.movement_cost_to(neighbor);
+
+                if (new_cost < neighbor.cost)
+                {
+                    neighbor.cost = new_cost;
+                    neighbor.prev = curr_idx;
+                    pq.emplace(new_cost, neighbor_idx);
+                }
+            }
+        }
+        return {}; // No path found
+    }
+} // namespace Pathing
