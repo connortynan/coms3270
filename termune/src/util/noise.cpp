@@ -1,9 +1,16 @@
 #include "noise.h"
 
+#include <array>
 #include <random>
 #include <numeric>
 #include <algorithm>
 #include <cmath>
+
+#include "util/generic_utils.h"
+
+constexpr int TableSize = 512;
+
+std::array<uint8_t, TableSize * 2> perm;
 
 namespace Noise
 {
@@ -22,14 +29,9 @@ namespace Noise
         return t * t * t * (t * (t * 6 - 15) + 10);
     }
 
-    static float lerp(float t, float a, float b)
-    {
-        return a + t * (b - a);
-    }
-
     static float grad(int hash, float x, float y)
     {
-        int h = hash & 3;
+        int h = hash & 0b11;
         float u = (h < 2) ? x : y;
         float v = (h < 2) ? y : x;
         return ((h & 1) ? -u : u) + ((h & 2) ? -2.0f * v : 2.0f * v);
@@ -56,10 +58,10 @@ namespace Noise
         float gradAB = grad(perm[ab], x, y - 1);
         float gradBB = grad(perm[bb], x - 1, y - 1);
 
-        float lerpX1 = lerp(u, gradAA, gradBA);
-        float lerpX2 = lerp(u, gradAB, gradBB);
+        float lerpX1 = utils::lerp(u, gradAA, gradBA);
+        float lerpX2 = utils::lerp(u, gradAB, gradBB);
 
-        return lerp(v, lerpX1, lerpX2);
+        return utils::lerp(v, lerpX1, lerpX2);
     }
 
     float layered_perlin(float x, float y, float amplitude, float frequency,

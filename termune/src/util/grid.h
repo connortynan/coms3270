@@ -21,10 +21,12 @@ public:
             throw std::invalid_argument("Initializer list size does not match grid dimensions");
     }
 
+    bool in_bounds(std::size_t x, std::size_t y) const { return (x < width) && (y < height); }
+
     T &at(std::size_t x, std::size_t y)
     {
 #ifdef GRID_EXTRA_CHECKING
-        if (x >= width_ || y >= height_)
+        if (!in_bounds(x, y))
             throw std::out_of_range("Grid::at() - index out of bounds");
 #endif
         return data_[y * width_ + x];
@@ -33,7 +35,7 @@ public:
     const T &at(std::size_t x, std::size_t y) const
     {
 #ifdef GRID_EXTRA_CHECKING
-        if (x >= width_ || y >= height_)
+        if (!in_bounds(x, y))
             throw std::out_of_range("Grid::at() const - index out of bounds");
 #endif
         return data_[y * width_ + x];
@@ -45,13 +47,10 @@ public:
     std::size_t width() const { return width_; }
     std::size_t height() const { return height_; }
 
+    void fill(T val) { std::fill(data_.begin(), data_.end(), val); }
+
     T *data() { return data_.data(); }
     const T *data() const { return data_.data(); }
-
-    void fill(const T &value)
-    {
-        std::fill(data_.begin(), data_.end(), value);
-    }
 
 private:
     std::size_t width_, height_;

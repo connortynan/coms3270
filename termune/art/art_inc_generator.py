@@ -48,8 +48,8 @@ def main():
             "/** Auto-generated ASCII art (compat mode)\n"
             " * All characters are either space or '#'.\n"
             " * Usage:\n"
-            " *     static const char *title_art[3][10] = {\n"
-            f' *     #include "{os.path.basename(compat_outfile)}"\n'
+            " *     const char *art[NUM_FRAMES][ART_HEIGHT] = {\n"
+            f' * #include "{os.path.basename(compat_outfile)}"\n'
             " *     };\n"
             " */\n\n"
         )

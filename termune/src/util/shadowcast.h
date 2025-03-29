@@ -16,7 +16,6 @@ namespace ShadowCast
      * @param origin_y The y-coordinate of the light source.
      * @param radius Optional maximum light radius (0 = unlimited).
      *
-     *
      * @details This implementation is based on the Python shadowcasting algorithm described in
      * https://www.roguebasin.com/index.php/Python_shadowcasting_implementation.
      */
@@ -42,7 +41,7 @@ namespace ShadowCast
         std::size_t origin_y,
         std::size_t radius = 0)
     {
-        Lightmap result(solid_map.width(), solid_map.height(), 0);
+        Lightmap result(solid_map.width(), solid_map.height(), false);
 
         update_lightmap(solid_map, result, origin_x, origin_y, radius);
 
