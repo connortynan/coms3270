@@ -4,14 +4,15 @@
 #include <time.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <fstream>
+#include <iostream>
 
-#include "dungeon.h"
-#include "generator.h"
-#include "monster.h"
 #include "game_context.h"
 #include "ui.h"
 #include "util/noise.h"
-#include "util/heap.h"
+
+constexpr mapsize_t DUNGEON_WIDTH = 80;
+constexpr mapsize_t DUNGEON_HEIGHT = 21;
 
 int main(int argc, char const *argv[])
 {
@@ -54,15 +55,15 @@ int main(int argc, char const *argv[])
         }
     }
 
-    generator_parameters params = {
-        .min_num_rooms = 6,
-        .max_num_rooms = 10,
-
+    Dungeon::Generator::Parameters params = {
         .min_room_width = 6,
         .max_room_width = 20,
 
         .min_room_height = 4,
         .max_room_height = 10,
+
+        .min_num_rooms = 6,
+        .max_num_rooms = 10,
 
         .min_num_stairs = 2,
         .max_num_stairs = 4,
@@ -74,68 +75,70 @@ int main(int argc, char const *argv[])
         .rock_hardness_noise_amount = 50.f,
     };
 
-    int rng_seed = time(NULL);
+    Noise::generate_permutation(time(NULL));
 
-    srand(rng_seed);
-    noise_generate_permutation();
-
-    game_context *game = game_init(num_mon, &params);
+    GameContext game(params, num_mon, DUNGEON_WIDTH, DUNGEON_HEIGHT);
 
     // Get the dungeon (either from file or random seed)
     if (load_flag)
     {
-        dungeon_data *dungeon = (dungeon_data *)malloc(sizeof(*dungeon));
-        uint8_t pc_x, pc_y;
+        std::ifstream infile(filename, std::ios::binary);
+        if (!infile)
+        {
+            std::cerr << "Failed to open dungeon file for loading: " << filename << "\\n";
+            return 1;
+        }
 
-        FILE *dungeon_load = fopen(filename, "rb");
-        dungeon_deserialize(dungeon, dungeon_load, &pc_x, &pc_y);
-        fclose(dungeon_load);
-
-        game_set_dungeon(game, dungeon, pc_x, pc_y);
+        mapsize_t pc_x, pc_y;
+        Dungeon dungeon = Dungeon::deserialize(infile, pc_x, pc_y);
+        game.set_dungeon(dungeon, pc_x, pc_y);
     }
     else
     {
-        game_regenerate_dungeon(game);
+        game.regenerate_dungeon();
     }
 
+    // Save dungeon to file if specifiec
     if (save_flag)
     {
-        FILE *dungeon_save = fopen(filename, "wb");
-        dungeon_serialize(game->current_dungeon, dungeon_save, game->player.x, game->player.y);
-        fclose(dungeon_save);
+        std::ofstream outfile(filename, std::ios::binary);
+        if (!outfile)
+        {
+            std::cerr << "Failed to open dungeon file for saving: " << filename << "\\n";
+            return 1;
+        }
+
+        game.dungeon.serialize(outfile);
     }
 
     fflush(stdout);
-    ui_context *ui = ui_init();
+    UiManager ui(game);
 
     // begin the queue for every monster
-    game_event event = {};
-    for (int i = 0; i < game->num_monsters; i++)
+    for (const auto &m : game.alive_monsters)
     {
-        event.entity_id = i;
-        event.turn_id = 1000 / game->monsters[i].speed;
-        heap_insert(game->event_queue, &event);
+        game.add_entity_event(m->id, 1000 / m->speed);
     }
+    // add player event to the queue
+    game.add_entity_event(ENTITY_PLAYER, 1000 / game.player->speed);
 
-    ui_display_title(ui);
+    ui.display_title();
     getch();
-    UI_MESSAGE(ui, "Spawned at (%d, %d)", game->player.x, game->player.y);
+    ui.display_message("Spawned at (%d, %d)", game.player->x, game.player->y);
 
-    ui_display_game(ui, game);
-    while (game->running && ui->running)
+    game.update_on_change();
+    ui.update_game_window();
+    while (game.running && ui.running)
     {
-        ui_handle_player_input(ui, game);
-        ui_display_game(ui, game);
+        ui.handle_player_input();
+        ui.update_game_window();
     }
 
-    if (ui->running)
+    if (ui.running)
     {
-        UI_MESSAGE(ui, "%s (Click any button to exit)", game->player.alive ? "YOU WIN!" : "YOU LOSE.");
+        ui.display_message("%s (Click any button to exit)", game.player->alive ? "YOU WIN!" : "YOU LOSE.");
         getch();
     }
-
-    ui_shutdown(ui);
-    game_destroy(game);
 
     return 0;
 }

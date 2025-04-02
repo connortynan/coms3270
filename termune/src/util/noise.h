@@ -2,7 +2,7 @@
 
 namespace Noise
 {
-    void generate_permutation(unsigned int seed = 0);
+    void generate_permutation(unsigned int seed);
 
     float perlin(float x, float y);
 

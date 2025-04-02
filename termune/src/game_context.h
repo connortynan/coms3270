@@ -1,91 +1,237 @@
 #pragma once
 
+#include <cassert>
+#include <memory>
+#include <unordered_map>
+#include <unordered_set>
+
+#include "entity.h"
 #include "dungeon.h"
-#include "player.h"
-#include "monster.h"
-#include "generator.h"
-#include "util/heap.h"
+#include "util/event_queue.h"
+#include "util/shadowcast.h"
 
-#define PLAYER_ENTITY_ID INT64_MAX
+static constexpr mapsize_t VISIBILITY_RADIUS = 3;
 
-typedef struct game_event
+struct VisibilityData
 {
-    int64_t entity_id;
-    uint64_t turn_id;
-} game_event;
+    Dungeon::cell_type_t last_seen;
+    bool visible;
+};
 
-/**
- * @struct game_context
- * @brief Represents the current state of the game, including the dungeon, player, and game entities.
- */
-typedef struct game_context
+class GameContext
 {
-    dungeon_data *current_dungeon; /**< Pointer to the current dungeon data. */
+public:
+    GameContext(Dungeon::Generator::Parameters params, entity_id_t num_monsters, mapsize_t dungeon_width, mapsize_t dungeon_height)
+        : dungeon(dungeon_width, dungeon_height),
+          entity_grid(dungeon_width, dungeon_height),
+          visibility_grid(dungeon_width, dungeon_height, {Dungeon::CELL_ROCK, false}),
+          monster_tunneling_map(dungeon_width, dungeon_height, 0),
+          monster_nontunneling_map(dungeon_width, dungeon_height, 0),
+          monster_line_of_sight_map(dungeon_width, dungeon_height, false),
+          gen_params(params),
+          next_entity_id(1),
+          num_monsters(num_monsters)
+    {
+        auto p = std::make_shared<Player>(0, 0);
+        p->id = ENTITY_PLAYER;
+        player = p;
+        entity_grid.at(0, 0) = p;
+    }
 
-    player player; /**< Pointer to the player character. */
+    entity_id_t add_monster(std::shared_ptr<Monster> m)
+    {
+        assert(entity_grid.at(m->x, m->y) == nullptr && "Grid cell already occupied");
+        m->id = next_entity_id++;
 
-    monster *monsters; /**< Array holding `monster` structures representing enemies in the game. */
-    int64_t num_monsters;
-    int64_t alive_monsters;
+        alive_monsters.insert(m);
 
-    uint8_t running; /**< Game running status: 1 = running, 0 = stopped. */
+        entity_grid.at(m->x, m->y) = m;
+        return m->id;
+    }
 
-    heap *event_queue; /**< Priority queue for managing game events. */
+    void remove_entity_in_grid(mapsize_t x, mapsize_t y)
+    {
+        auto &slot = entity_grid.at(x, y);
+        if (!slot)
+            return;
 
-    uint64_t turn_id; /**< Current turn id for processing event queue */
+        slot.reset(); // shared_ptr will delete if last ref
+    }
 
-    generator_parameters *dungeon_gen_params;
-} game_context;
+    void move_entity(mapsize_t from_x, mapsize_t from_y, mapsize_t to_x, mapsize_t to_y)
+    {
+        if (from_x == to_x && from_y == to_y)
+            return;
 
-/**
- * @brief Initializes the game context.
- *
- * Allocates and initializes the game context, including the dungeon, player, and monsters.
- *
- * @param dungeon The starting dungeon, pregenerated
- * @param num_monsters The number of monsters to generate in the game.
- * @return A pointer to the initialized game context, or NULL on failure.
- */
-game_context *game_init(int64_t num_monsters, generator_parameters *params);
+        assert(dungeon.in_bounds(to_x, to_y));
+        auto &from = entity_grid.at(from_x, from_y);
+        assert(from && "No entity at source position");
 
-int game_regenerate_dungeon(game_context *g);
-int game_set_dungeon(game_context *g, dungeon_data *d, uint8_t pc_x, uint8_t pc_y);
+        auto &killed = entity_grid.at(to_x, to_y);
+        if (killed)
+        {
+            killed->alive = false;
+            remove_entity_in_grid(to_x, to_y);
+        }
 
-int game_add_event(size_t entity_id, uint64_t turn_id);
+        from->x = to_x;
+        from->y = to_y;
+        entity_grid.at(to_x, to_y) = std::move(from);
+    }
 
-/**
- * @brief Processes game events.
- *
- * Handles events in the event queue, updating the game state accordingly.
- *
- * @param g Pointer to the game context.
- * @return Returns 0 on success, or an error code on failure.
- */
-int game_process_events(game_context *g);
+    void cleanup_dead_entities()
+    {
+        for (auto it = alive_monsters.begin(); it != alive_monsters.end();)
+        {
+            auto &m = *it;
+            if (!m->alive)
+            {
+                if (entity_grid.at(m->x, m->y) == m)
+                    remove_entity_in_grid(m->x, m->y);
+                it = alive_monsters.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
 
-/**
- * @brief Cleans up and deallocates game resources.
- *
- * Frees all allocated memory associated with the game context, including the dungeon, player, and monsters.
- *
- * @param g Pointer to the game context.
- * @return Returns 0 on success, or an error code on failure.
- */
-int game_destroy(game_context *g);
+    std::shared_ptr<Entity> entity_at(mapsize_t x, mapsize_t y)
+    {
+        if (!dungeon.in_bounds(x, y))
+            return nullptr;
+        return entity_grid.at(x, y);
+    }
 
-/**
- * @brief Retrieves the entity ID at a specific position in the game world.
- *
- * This function checks if an entity (player, monster, or other object) exists at the given
- * (x, y) coordinate in the game world.
- *
- * @param g Pointer to the game context.
- * @param x The x-coordinate to check.
- * @param y The y-coordinate to check.
- * @return The entity ID at the specified position, or -1 if no entity is present.
- */
-int64_t game_entity_id_at(game_context *g, uint8_t x, uint8_t y);
+    std::shared_ptr<const Entity> entity_at(mapsize_t x, mapsize_t y) const
+    {
+        if (!dungeon.in_bounds(x, y))
+            return nullptr;
+        return entity_grid.at(x, y);
+    }
 
-void game_generate_display_buffer(const game_context *g, char *result);
+    void regenerate_dungeon()
+    {
+        Dungeon::Generator::generate_dungeon(dungeon, gen_params, 0);
+        set_dungeon(dungeon, dungeon.rooms[0].center_x, dungeon.rooms[0].center_y);
+        visibility_grid.fill({Dungeon::CELL_ROCK, false});
+        update_on_change();
+    }
 
-void game_display(const game_context *g, const int display_border);
+    void set_dungeon(Dungeon &d, mapsize_t pc_x, mapsize_t pc_y)
+    {
+        dungeon = d;
+        entity_grid.fill(nullptr);
+        alive_monsters.clear();
+
+        // player entity
+        auto p = std::make_shared<Player>(pc_x, pc_y);
+        p->id = ENTITY_PLAYER;
+        player = p;
+        entity_grid.at(pc_x, pc_y) = p;
+
+        for (int i = 0; i < num_monsters; i++)
+        {
+            mapsize_t monster_x, monster_y;
+            do
+            {
+                monster_x = rand() % dungeon.width;
+                monster_y = rand() % dungeon.height;
+            } while (dungeon.type_grid.at(monster_x, monster_y) == Dungeon::CELL_ROCK || entity_grid.at(monster_x, monster_y) != nullptr);
+
+            uint8_t flags = rand() % 0xF;
+            auto m = std::make_shared<Monster>(
+                monster_x, monster_y,
+                (rand() % 15) + 5,
+                0, // dummy id (will get overwritten in add_monster)
+                flags);
+            add_monster(m);
+        }
+    }
+
+    void add_entity_event(entity_id_t id, tick_t delay)
+    {
+        events.add(id, delay);
+    }
+
+    void process_events()
+    {
+        std::vector<entity_id_t> entities = events.resolve_events_until(ENTITY_PLAYER);
+        for (const entity_id_t id : entities)
+        {
+            if (id == ENTITY_PLAYER && player->alive)
+            {
+                add_entity_event(id, 1000 / player->speed);
+                break;
+            }
+            for (auto &m : alive_monsters)
+            {
+                if (m->alive && id == m->id)
+                {
+                    int dx, dy;
+                    m->get_desired_move(dx, dy, *this);
+                    m->move(dx, dy, *this);
+                    add_entity_event(id, 1000 / m->speed);
+                    break;
+                }
+            }
+        }
+        cleanup_dead_entities();
+        running = alive_monsters.size() > 0 && player->alive;
+    }
+
+    void update_visibility()
+    {
+        ShadowCast::Lightmap solid(dungeon.width, dungeon.height);
+
+        for (mapsize_t y = 0; y < dungeon.height; y++)
+            for (mapsize_t x = 0; x < dungeon.width; x++)
+            {
+                solid.at(x, y) = dungeon.type_grid.at(x, y) == Dungeon::CELL_ROCK;
+            }
+
+        ShadowCast::Lightmap visible_map = ShadowCast::solve_lightmap(solid, player->x, player->y, VISIBILITY_RADIUS);
+
+        for (mapsize_t y = 0; y < visible_map.height(); y++)
+            for (mapsize_t x = 0; x < visible_map.width(); x++)
+            {
+                visibility_grid.at(x, y).visible = visible_map.at(x, y);
+
+                if (visible_map.at(x, y))
+                    visibility_grid.at(x, y).last_seen = dungeon.type_grid.at(x, y);
+            }
+    }
+
+    void update_on_change()
+    {
+        update_visibility();
+        Monster::update_global_maps(*this);
+    }
+
+    VisibilityData &visibility_at(const mapsize_t x, const mapsize_t y) { return visibility_grid.at(x, y); }
+
+    void quit() { running = false; }
+    tick_t current_tick() const { return events.current_tick(); };
+
+public:
+    Dungeon dungeon;
+    std::shared_ptr<Player> player;
+    std::unordered_set<std::shared_ptr<Monster>> alive_monsters;
+    bool running = true;
+    bool fog_of_war = true;
+    bool teleport_mode = false;
+
+private:
+    Grid<std::shared_ptr<Entity>> entity_grid;
+    Grid<VisibilityData> visibility_grid;
+    Grid<unsigned int> monster_tunneling_map;
+    Grid<unsigned int> monster_nontunneling_map;
+    Grid<unsigned char> monster_line_of_sight_map; // right now equivalent to visibilty grid
+    EventQueue<entity_id_t> events;
+    Dungeon::Generator::Parameters gen_params;
+    entity_id_t next_entity_id;
+    entity_id_t num_monsters;
+
+    friend class Monster;
+};

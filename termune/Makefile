@@ -12,7 +12,7 @@ SRC = $(shell find $(SRC_DIR) -type f -name "*.cpp")
 INCLUDES = $(shell find $(SRC_DIR) -type f -name "*.h")
 TARGET = $(BIN_DIR)/termune
 
-BASE_CFLAGS = -Wall -g -I$(SRC_DIR) -I$(GEN_DIR)
+BASE_CFLAGS = -Wall -g -I$(SRC_DIR) -I$(BUILD_DIR)
 BASE_LDFLAGS = -lm
 
 ifeq ($(DEBUG), 1)

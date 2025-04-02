@@ -3,12 +3,6 @@
 namespace utils
 {
     template <typename T>
-    constexpr T clamp(T x, T min, T max)
-    {
-        return std::max(min, std::min(x, max));
-    }
-
-    template <typename T>
     constexpr T lerp(T t, T a, T b)
     {
         return a + (b - a) * t;

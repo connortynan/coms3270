@@ -3,9 +3,7 @@
 #include <vector>
 #include <cstddef>
 #include <initializer_list>
-#ifdef GRID_EXTRA_CHECKING
 #include <stdexcept>
-#endif
 
 template <typename T>
 class Grid
@@ -44,13 +42,22 @@ public:
     T &operator()(std::size_t x, std::size_t y) { return at(x, y); }
     const T &operator()(std::size_t x, std::size_t y) const { return at(x, y); }
 
-    std::size_t width() const { return width_; }
-    std::size_t height() const { return height_; }
+    void swap(std::size_t x1, std::size_t y1, std::size_t x2, std::size_t y2)
+    {
+#ifdef GRID_EXTRA_CHECKING
+        if (!in_bounds(x1, y1) || !in_bounds(x2, y2))
+            throw std::out_of_range("Grid::swap_items() - index out of bounds");
+#endif
+        std::swap(at(x1, y1), at(x2, y2));
+    }
 
     void fill(T val) { std::fill(data_.begin(), data_.end(), val); }
 
     T *data() { return data_.data(); }
     const T *data() const { return data_.data(); }
+
+    std::size_t width() const { return width_; }
+    std::size_t height() const { return height_; }
 
 private:
     std::size_t width_, height_;

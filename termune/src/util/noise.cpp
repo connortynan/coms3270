@@ -16,7 +16,7 @@ namespace Noise
 {
     std::array<uint8_t, TableSize * 2> perm;
 
-    void generate_permutation(uint32_t seed)
+    void generate_permutation(unsigned int seed = 0)
     {
         std::mt19937 rng(seed ? seed : std::random_device{}());
         std::iota(perm.begin(), perm.begin() + TableSize, 0);

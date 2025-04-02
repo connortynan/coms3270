@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include "util/grid.h"
+#include "util/generic_utils.h"
 
 template <typename T>
 Grid<T> gaussian_blur(Grid<T> &img, bool inplace = false)
@@ -24,8 +25,8 @@ Grid<T> gaussian_blur(Grid<T> &img, bool inplace = false)
             {
                 for (int dx = -1; dx <= 1; ++dx)
                 {
-                    std::size_t nx = clamp<int>(x + dx, 0, static_cast<int>(width) - 1);
-                    std::size_t ny = clamp<int>(y + dy, 0, static_cast<int>(height) - 1);
+                    std::size_t nx = std::clamp<int>(x + dx, 0, static_cast<int>(width) - 1);
+                    std::size_t ny = std::clamp<int>(y + dy, 0, static_cast<int>(height) - 1);
 
                     int kernel_value = gaussian_kernel(dx + 1, dy + 1);
                     sum += img(nx, ny) * kernel_value;

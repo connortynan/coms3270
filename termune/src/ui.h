@@ -6,63 +6,85 @@
 #include <ncurses.h>
 #endif
 
+#include <cstdint>
+#include <memory>
+#include <array>
+#include <string>
+#include "types.h"
 #include "game_context.h"
 
-#define UI_MESSAGE(ctx, ...)                              \
-    do                                                    \
-    {                                                     \
-        werase((ctx)->message_win);                       \
-        mvwprintw((ctx)->message_win, 0, 0, __VA_ARGS__); \
-        wrefresh((ctx)->message_win);                     \
-    } while (0)
-
-#define UI_STATUS(ctx, ...)                              \
-    do                                                   \
-    {                                                    \
-        werase((ctx)->status_win);                       \
-        mvwprintw((ctx)->status_win, 0, 0, __VA_ARGS__); \
-        wrefresh((ctx)->status_win);                     \
-    } while (0)
-
-typedef struct
+class UiManager
 {
-    WINDOW *message_win;
-    WINDOW *dungeon_win;
-    WINDOW *monster_win;
-    WINDOW *status_win;
+public:
+    explicit UiManager(GameContext &game);
+    ~UiManager();
 
-    uint8_t show_monster_win;
-    uint64_t monster_win_scroll;
-    uint8_t running;
-    uint16_t term_x;
-    uint16_t term_y;
-} ui_context;
+    static constexpr int MESSAGE_HEIGHT = 1;
+    static constexpr int STATUS_HEIGHT = 2;
+    static constexpr int MONSTER_WIN_WIDTH = 30;
+    static constexpr int MONSTER_WIN_HEIGHT = 10;
 
-typedef enum
-{
-    CMD_NONE,
-    CMD_MOVE_NW,
-    CMD_MOVE_N,
-    CMD_MOVE_NE,
-    CMD_MOVE_E,
-    CMD_MOVE_SE,
-    CMD_MOVE_S,
-    CMD_MOVE_SW,
-    CMD_MOVE_W,
-    CMD_REST,
-    CMD_STAIRS_UP,
-    CMD_STAIRS_DOWN,
-    CMD_MONSTER_LIST,
-    CMD_MONSTER_LIST_SCROLL_UP,
-    CMD_MONSTER_LIST_SCROLL_DOWN,
-    CMD_EXIT_MONSTER_LIST,
-    CMD_QUIT
-} ui_command;
+    enum class Command
+    {
+        NONE,
+        MOVE_NW,
+        MOVE_N,
+        MOVE_NE,
+        MOVE_E,
+        MOVE_SE,
+        MOVE_S,
+        MOVE_SW,
+        MOVE_W,
+        REST,
+        STAIRS_UP,
+        STAIRS_DOWN,
+        MONSTER_LIST,
+        MONSTER_LIST_SCROLL_UP,
+        MONSTER_LIST_SCROLL_DOWN,
+        EXIT_MONSTER_LIST,
+        TOGGLE_FOG_OF_WAR,
+        TOGGLE_TELEPORT_MODE,
+        RANDOM_TELEPORT,
+        QUIT
+    };
 
-ui_context *ui_init();
-void ui_shutdown(ui_context *ctx);
+    enum class WindowID
+    {
+        MESSAGE,
+        DUNGEON,
+        MONSTER,
+        STATUS
+    };
 
-void ui_handle_player_input(ui_context *ctx, game_context *g);
-void ui_display_game(ui_context *ctx, game_context *g);
+    void check_for_terminal_resize();
+    void display_message(const char *format, ...);
+    void display_status(const char *format, ...);
+    void display_title();
+    void update_game_window();
+    void handle_player_input();
+    void stop() { running = false; }
 
-void ui_display_title(ui_context *ctx);
+    bool running = true;
+
+    WINDOW *operator[](WindowID id) { return win(id); }
+    WINDOW *win(WindowID id) { return windows[static_cast<size_t>(id)]; }
+
+private:
+    GameContext &game;
+
+    void display_dungeon();
+    void display_monster_list();
+    void display_teleport_menu();
+    Command get_command_from_key(int ch);
+
+    std::array<WINDOW *, 4> windows{}; // MESSAGE, DUNGEON, MONSTER, STATUS
+
+    uint16_t term_x = 0;
+    uint16_t term_y = 0;
+
+    bool show_monster_window = false;
+    entity_id_t monster_scroll = 0;
+
+    mapsize_t teleport_cursor_x = 0;
+    mapsize_t teleport_cursor_y = 0;
+};

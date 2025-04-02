@@ -1,5 +1,5 @@
 #pragma once
 
 using mapsize_t = unsigned char;
+using tick_t = unsigned long;
 using entity_id_t = long;
-using cell_hardness_t = unsigned char;
