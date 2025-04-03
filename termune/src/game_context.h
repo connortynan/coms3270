@@ -219,8 +219,6 @@ public:
     std::shared_ptr<Player> player;
     std::unordered_set<std::shared_ptr<Monster>> alive_monsters;
     bool running = true;
-    bool fog_of_war = true;
-    bool teleport_mode = false;
 
 private:
     Grid<std::shared_ptr<Entity>> entity_grid;

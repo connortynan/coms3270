@@ -45,6 +45,7 @@ public:
         TOGGLE_FOG_OF_WAR,
         TOGGLE_TELEPORT_MODE,
         RANDOM_TELEPORT,
+        TOGGLE_SHOW_HARDNESS,
         QUIT
     };
 
@@ -76,6 +77,7 @@ private:
     void display_monster_list();
     void display_teleport_menu();
     Command get_command_from_key(int ch);
+    void init_curses();
 
     std::array<WINDOW *, 4> windows{}; // MESSAGE, DUNGEON, MONSTER, STATUS
 
@@ -87,4 +89,8 @@ private:
 
     mapsize_t teleport_cursor_x = 0;
     mapsize_t teleport_cursor_y = 0;
+
+    bool fog_of_war = true;
+    bool teleport_mode = false;
+    bool show_hardness = false;
 };

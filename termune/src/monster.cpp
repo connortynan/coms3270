@@ -3,6 +3,7 @@
 #include "game_context.h"
 #include "util/pathing.h"
 #include "util/shadowcast.h"
+#include "dungeon.h"
 
 class DistanceNode : public Pathing::Node
 {
@@ -47,12 +48,10 @@ void Monster::update_global_maps(GameContext &game)
     Grid<unsigned char> solid_map(game.dungeon.width, game.dungeon.height, false);
 
     for (mapsize_t y = 0; y < game.dungeon.height; y++)
-    {
         for (mapsize_t x = 0; x < game.dungeon.width; x++)
         {
             solid_map(x, y) = (game.dungeon.type_grid(x, y) == Dungeon::CELL_ROCK);
         }
-    }
 
     game.monster_line_of_sight_map = ShadowCast::solve_lightmap(solid_map, game.player->x, game.player->y, 255);
 
@@ -61,25 +60,21 @@ void Monster::update_global_maps(GameContext &game)
     Grid<Dungeon::cell_hardness_t> non_weights(game.dungeon.width, game.dungeon.height, 0);
 
     for (mapsize_t y = 0; y < game.dungeon.height; y++)
-    {
         for (mapsize_t x = 0; x < game.dungeon.width; x++)
         {
             if (game.dungeon.type_grid(x, y) == Dungeon::CELL_ROCK)
                 non_weights.at(x, y) = 255;
             tunneling_weights.at(x, y) = game.dungeon.hardness_grid(x, y);
         }
-    }
 
     auto solve = [&](Grid<uint32_t> &out, Grid<uint8_t> &weights)
     {
         std::vector<std::unique_ptr<Pathing::Node>> nodes;
         for (mapsize_t y = 0; y < game.dungeon.height; y++)
-        {
             for (mapsize_t x = 0; x < game.dungeon.width; x++)
             {
                 nodes.push_back(std::make_unique<DistanceNode>(x, y, &weights));
             }
-        }
 
         std::size_t start_idx = game.player->x + game.player->y * game.dungeon.width;
         Pathing::solve(nodes, start_idx);
@@ -202,11 +197,6 @@ void Monster::get_desired_move(int &dx, int &dy, GameContext &g) const
     dy = 0;
 }
 
-#include "entity.h"
-#include "game_context.h"
-#include "dungeon.h"
-#include "util/shadowcast.h"
-
 bool Monster::move(int dx, int dy, GameContext &g, bool force)
 {
     // Update LOS / target
@@ -223,7 +213,7 @@ bool Monster::move(int dx, int dy, GameContext &g, bool force)
     mapsize_t target_x = x + dx;
     mapsize_t target_y = y + dy;
 
-    if (!g.dungeon.in_bounds(target_x, target_y))
+    if (!g.dungeon.in_bounds(target_x, target_y) && dx == 0 && dy == 0)
         return false;
 
     auto target_cell = g.dungeon.type_grid(target_x, target_y);
@@ -234,7 +224,6 @@ bool Monster::move(int dx, int dy, GameContext &g, bool force)
     if (entity && entity->id == ENTITY_PLAYER)
     {
         g.player->alive = false;
-        return true;
     }
     else if (entity)
     {

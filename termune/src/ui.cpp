@@ -9,10 +9,10 @@
 #include "dungeon.h"
 #include "game_context.h"
 
-#define COLOR_LGRAY 126
-#define COLOR_DGRAY 127
+static constexpr short COLOR_TITLE_LIGHT = 64;
+static constexpr short COLOR_TITLE_DARK = 65;
 
-UiManager::UiManager(GameContext &game) : game(game)
+void UiManager::init_curses()
 {
     setlocale(LC_ALL, "");
     initscr();
@@ -24,11 +24,25 @@ UiManager::UiManager(GameContext &game) : game(game)
     start_color();
     use_default_colors();
 
-    init_color(COLOR_LGRAY, 500, 500, 500);
-    init_color(COLOR_DGRAY, 250, 250, 250);
-    init_pair(1, COLOR_WHITE, COLOR_LGRAY);
-    init_pair(2, COLOR_LGRAY, COLOR_DGRAY);
-    init_pair(3, COLOR_DGRAY, -1);
+    init_color(COLOR_TITLE_LIGHT, 500, 500, 500);
+    init_color(COLOR_TITLE_DARK, 250, 250, 250);
+    init_pair(1, COLOR_WHITE, COLOR_TITLE_LIGHT);
+    init_pair(2, COLOR_TITLE_LIGHT, COLOR_TITLE_DARK);
+    init_pair(3, COLOR_TITLE_DARK, -1);
+
+    for (int i = 0; i < 64; ++i)
+    {
+        // map 0-63 to grayscale from dark to light (0-1000)
+        int shade = static_cast<int>(1000.0 * i / 63);
+        int color_id = 128 + i;
+        init_color(color_id, shade, shade, shade);
+        init_pair(color_id, -1, color_id);
+    }
+}
+
+UiManager::UiManager(GameContext &game) : game(game)
+{
+    init_curses();
 
     windows[static_cast<size_t>(WindowID::MESSAGE)] = newwin(MESSAGE_HEIGHT, game.dungeon.width, 0, 0);
     windows[static_cast<size_t>(WindowID::DUNGEON)] = newwin(game.dungeon.height, game.dungeon.width, MESSAGE_HEIGHT, 0);
@@ -141,28 +155,34 @@ void UiManager::display_title()
 
 void UiManager::display_dungeon()
 {
-    werase(win(WindowID::DUNGEON));
+    WINDOW *w = win(WindowID::DUNGEON);
+    werase(w);
 
     for (mapsize_t y = 0; y < game.dungeon.height; y++)
         for (mapsize_t x = 0; x < game.dungeon.width; x++)
         {
-            bool visible = game.visibility_at(x, y).visible || !game.fog_of_war;
+            int color_idx = 128 + std::clamp(game.dungeon.hardness_grid.at(x, y) / 4, 0, 63);
+            bool visible = game.visibility_at(x, y).visible || !fog_of_war;
             if (visible)
-                wattron(win(WindowID::DUNGEON), A_BOLD);
+                wattron(w, A_BOLD);
+            if (show_hardness)
+                wattron(w, COLOR_PAIR(color_idx));
 
-            Dungeon::cell_type_t displayed_cell = game.fog_of_war
+            Dungeon::cell_type_t displayed_cell = fog_of_war
                                                       ? game.visibility_at(x, y).last_seen
                                                       : game.dungeon.type_grid.at(x, y);
 
             const auto &entity = game.entity_at(x, y);
 
             if (visible && entity)
-                mvwaddch(win(WindowID::DUNGEON), y, x, entity->ch);
+                mvwaddch(w, y, x, entity->ch);
             else
-                mvwaddch(win(WindowID::DUNGEON), y, x, Dungeon::char_map(displayed_cell));
+                mvwaddch(w, y, x, Dungeon::char_map(displayed_cell));
 
             if (visible)
-                wattroff(win(WindowID::DUNGEON), A_BOLD);
+                wattroff(w, A_BOLD);
+            if (show_hardness)
+                wattroff(w, COLOR_PAIR(color_idx));
         }
 
     box(win(WindowID::DUNGEON), 0, 0);
@@ -227,7 +247,7 @@ void UiManager::display_teleport_menu()
 
 void UiManager::update_game_window()
 {
-    if (game.teleport_mode)
+    if (teleport_mode)
         display_teleport_menu();
     else if (show_monster_window)
         display_monster_list();
@@ -287,6 +307,8 @@ UiManager::Command UiManager::get_command_from_key(int ch)
         return Command::TOGGLE_TELEPORT_MODE;
     case 'r':
         return Command::RANDOM_TELEPORT;
+    case 'H':
+        return Command::TOGGLE_SHOW_HARDNESS;
     default:
         return Command::NONE;
     }
@@ -303,7 +325,7 @@ void UiManager::handle_player_input()
     int dx = 0, dy = 0;
     bool move_attempt = true;
 
-    if (game.teleport_mode)
+    if (teleport_mode)
     {
         switch (cmd)
         {
@@ -341,7 +363,7 @@ void UiManager::handle_player_input()
                 game.player->move(int(teleport_cursor_x) - int(game.player->x),
                                   int(teleport_cursor_y) - int(game.player->y),
                                   game, true);
-                game.teleport_mode = false;
+                teleport_mode = false;
             }
             else
             {
@@ -359,7 +381,7 @@ void UiManager::handle_player_input()
             game.player->move(int(teleport_cursor_x) - int(game.player->x),
                               int(teleport_cursor_y) - int(game.player->y),
                               game, true);
-            game.teleport_mode = false;
+            teleport_mode = false;
             update_but_dont_move_monsters = true;
             goto run_update;
         case Command::QUIT:
@@ -453,12 +475,15 @@ void UiManager::handle_player_input()
             show_monster_window = true;
             return;
         case Command::TOGGLE_FOG_OF_WAR:
-            game.fog_of_war = !game.fog_of_war;
+            fog_of_war = !fog_of_war;
             return;
         case Command::TOGGLE_TELEPORT_MODE:
             teleport_cursor_x = game.player->x;
             teleport_cursor_y = game.player->y;
-            game.teleport_mode = true;
+            teleport_mode = true;
+            return;
+        case Command::TOGGLE_SHOW_HARDNESS:
+            show_hardness = !show_hardness;
             return;
         case Command::QUIT:
             running = false;
