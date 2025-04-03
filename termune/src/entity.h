@@ -45,8 +45,8 @@ public:
         : Entity(x, y, speed, '?', id),
           intelligent(intelligent),
           telepathic(telepathic),
-          tunneling(tunneling),
-          erratic(erratic)
+          erratic(erratic),
+          tunneling(tunneling)
     {
         ch = "0123456789abcdef"[characteristics()];
     }
@@ -55,8 +55,8 @@ public:
     {
         intelligent = flags & 1;
         telepathic = (flags >> 1) & 1;
-        erratic = (flags >> 2) & 1;
-        tunneling = (flags >> 3) & 1;
+        tunneling = (flags >> 2) & 1;
+        erratic = (flags >> 1) & 1;
     }
 
     // Puts characteristics in 4 bit integer in order: ETLI
@@ -77,6 +77,6 @@ private:
 
     bool intelligent;
     bool telepathic;
-    bool tunneling;
     bool erratic;
+    bool tunneling;
 };

@@ -1,16 +1,14 @@
 # termune / coms327 rougelike
 
-Assignment 1.05 - User Interface with Ncurses
+Assignment 1.06 - “Fog of War” and porting to C++
 ---
 
-Now an actual game!
+Now in C++!
 
-Game controls are identical to the requirements in the spec.
+Game controls are identical to the requirements in the spec. (plus `Shift+H` as an additional debug cheat to show rock hardness)
 The game ends when either the player is defeated, or all monsters are defeated.
 
-The windows are centered in the terminal in cases where the terminal size is greater than the expected 80x24.
-
-The `art` directory contains a supplemental python script to aid in converting text art to `#include`-able C code, this script is only ran during compliation, and not runtime.
+The game window is centered in the terminal in cases where the terminal size is greater than the expected 80x24.
 
 ---
 

@@ -140,7 +140,7 @@ public:
                 monster_y = rand() % dungeon.height;
             } while (dungeon.type_grid.at(monster_x, monster_y) == Dungeon::CELL_ROCK || entity_grid.at(monster_x, monster_y) != nullptr);
 
-            uint8_t flags = rand() % 0xF;
+            uint8_t flags = rand() & 0b1111;
             auto m = std::make_shared<Monster>(
                 monster_x, monster_y,
                 (rand() % 15) + 5,

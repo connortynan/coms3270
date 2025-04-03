@@ -1,5 +1,27 @@
 ## RECENT AT TOP
 
+4/2/25 7:45 PM
+    - Added show rock hardness toggle (`Shift+H`)
+    - Even more refactoring (for good measure)
+
+4/2/25 3:45 AM
+    - Added fog of war and teleportation
+    - More refactoring !!!
+
+4/1/25 1:00 AM
+    - Ported everything else to C++ (with significant refactoring)
+    - Decoupled `UiContext` and `GameContext`
+
+3/29/25 1:30 AM
+    - Modified more util files 
+    - Moved `util/noise` into header/source pair
+
+3/28/25 4:15 PM
+    - Renamed all files to C++ (c->cpp, h->hpp)
+    - Modified Makefile to build in C++
+    - Deleted unneeded util (vector, deque, heap)
+    - Ported all util to C++ style
+
 3/26/25 9:30 PM
     - Added stair support
     - Refactored gamestate dungeon handling
