@@ -108,7 +108,7 @@ int main(int argc, char const *argv[])
             return 1;
         }
 
-        game.dungeon.serialize(outfile);
+        game.dungeon.serialize(outfile, game.player->x, game.player->y);
     }
 
     fflush(stdout);

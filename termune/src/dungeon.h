@@ -50,7 +50,7 @@ public:
           type_grid(width, height, CELL_ROCK),
           hardness_grid(width, height, 0) {}
 
-    void serialize(std::ostream &out) const;
+    void serialize(std::ostream &out, mapsize_t pc_x, mapsize_t pc_y) const;
     static Dungeon deserialize(std::istream &in, mapsize_t &pc_x, mapsize_t &pc_y);
 
     bool in_bounds(mapsize_t x, mapsize_t y) const

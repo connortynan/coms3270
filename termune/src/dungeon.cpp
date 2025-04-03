@@ -1,228 +1,158 @@
-#include <stdio.h>
-#include <string.h>
+#include <cstring>
 #include <endian.h>
+#include <vector>
+#include <stdexcept>
+#include <cstdint>
 
 #include "dungeon.h"
 
 #define DUNGEON_FILE_HEADER "RLG327-S2025"
+#define DUNGEON_HEADER_LEN 12
 
-void Dungeon::serialize(std::ostream &out) const
+void Dungeon::serialize(std::ostream &out, mapsize_t pc_x, mapsize_t pc_y) const
 {
+    // Header
+    out.write(DUNGEON_FILE_HEADER, DUNGEON_HEADER_LEN);
+
+    // Version
+    uint32_t version = htobe32(0);
+    out.write(reinterpret_cast<const char *>(&version), sizeof(version));
+
+    // Placeholder for file size
+    std::streampos size_pos = out.tellp();
+    uint32_t dummy_size = 0;
+    out.write(reinterpret_cast<const char *>(&dummy_size), sizeof(dummy_size));
+
+    // PC position (placeholders, must be filled when calling)
+    out.write(reinterpret_cast<const char *>(&pc_x), 1);
+    out.write(reinterpret_cast<const char *>(&pc_y), 1);
+
+    // Hardness matrix and stair info
+    std::vector<uint16_t> up_stairs;
+    std::vector<uint16_t> down_stairs;
+
+    for (mapsize_t y = 0; y < height; ++y)
+        for (mapsize_t x = 0; x < width; ++x)
+        {
+            cell_type_t type = type_grid.at(x, y);
+            if (type == CELL_STAIR_UP)
+                up_stairs.push_back((x << 8) | y);
+            else if (type == CELL_STAIR_DOWN)
+                down_stairs.push_back((x << 8) | y);
+
+            cell_hardness_t hardness = hardness_grid.at(x, y);
+            out.write(reinterpret_cast<const char *>(&hardness), sizeof(cell_hardness_t));
+        }
+
+    // Rooms
+    uint16_t num_rooms = htobe16(rooms.size());
+    out.write(reinterpret_cast<const char *>(&num_rooms), sizeof(num_rooms));
+
+    for (const auto &room : rooms)
+    {
+        char room_x = room.center_x - room.width / 2;
+        char room_y = room.center_y - room.height / 2;
+        char room_w = room.width;
+        char room_h = room.height;
+
+        out.write(&room_x, 1);
+        out.write(&room_y, 1);
+        out.write(&room_w, 1);
+        out.write(&room_h, 1);
+    }
+
+    // Up stairs
+    uint16_t ups = htobe16(up_stairs.size());
+    out.write(reinterpret_cast<const char *>(&ups), sizeof(ups));
+    for (uint16_t val : up_stairs)
+        out.write(reinterpret_cast<const char *>(&val), sizeof(val));
+
+    // Down stairs
+    uint16_t downs = htobe16(down_stairs.size());
+    out.write(reinterpret_cast<const char *>(&downs), sizeof(downs));
+    for (uint16_t val : down_stairs)
+        out.write(reinterpret_cast<const char *>(&val), sizeof(val));
+
+    // Patch in file size
+    std::streampos end_pos = out.tellp();
+    uint32_t size = htobe32(static_cast<uint32_t>(end_pos));
+    out.seekp(size_pos);
+    out.write(reinterpret_cast<const char *>(&size), sizeof(size));
+    out.seekp(end_pos);
 }
 
 Dungeon Dungeon::deserialize(std::istream &in, mapsize_t &pc_x, mapsize_t &pc_y)
 {
-    return Dungeon{0, 0};
+    char marker[DUNGEON_HEADER_LEN + 1] = {};
+    in.read(marker, DUNGEON_HEADER_LEN);
+    if (std::strcmp(marker, DUNGEON_FILE_HEADER) != 0)
+        throw std::runtime_error("Invalid file header");
+
+    uint32_t version, file_size;
+    in.read(reinterpret_cast<char *>(&version), sizeof(version));
+    version = be32toh(version);
+    in.read(reinterpret_cast<char *>(&file_size), sizeof(file_size));
+    file_size = be32toh(file_size);
+
+    uint8_t px, py;
+    in.read(reinterpret_cast<char *>(&px), 1);
+    in.read(reinterpret_cast<char *>(&py), 1);
+    pc_x = px;
+    pc_y = py;
+
+    Dungeon dungeon(80, 21);
+
+    for (mapsize_t y = 0; y < dungeon.height; ++y)
+        for (mapsize_t x = 0; x < dungeon.width; ++x)
+        {
+            cell_hardness_t h;
+            in.read(reinterpret_cast<char *>(&h), sizeof(h));
+            dungeon.hardness_grid.at(x, y) = h;
+            dungeon.type_grid.at(x, y) = (h > 0) ? CELL_ROCK : CELL_CORRIDOR;
+        }
+
+    uint16_t num_rooms_be;
+    in.read(reinterpret_cast<char *>(&num_rooms_be), sizeof(num_rooms_be));
+    uint16_t num_rooms = be16toh(num_rooms_be);
+
+    dungeon.rooms.resize(num_rooms);
+    for (uint16_t i = 0; i < num_rooms; ++i)
+    {
+        uint8_t room_x, room_y, room_w, room_h;
+        in.read(reinterpret_cast<char *>(&room_x), 1);
+        in.read(reinterpret_cast<char *>(&room_y), 1);
+        in.read(reinterpret_cast<char *>(&room_w), 1);
+        in.read(reinterpret_cast<char *>(&room_h), 1);
+
+        RoomData &room = dungeon.rooms[i];
+        room.center_x = room_x + room_w / 2;
+        room.center_y = room_y + room_h / 2;
+        room.width = room_w;
+        room.height = room_h;
+
+        for (mapsize_t y = room_y; y < room_y + room_h; ++y)
+            for (mapsize_t x = room_x; x < room_x + room_w; ++x)
+                dungeon.type_grid.at(x, y) = CELL_ROOM;
+    }
+
+    auto read_stairs = [&](cell_type_t stair_type)
+    {
+        uint16_t count_be;
+        in.read(reinterpret_cast<char *>(&count_be), sizeof(count_be));
+        uint16_t count = be16toh(count_be);
+
+        for (uint16_t i = 0; i < count; ++i)
+        {
+            uint16_t pos;
+            in.read(reinterpret_cast<char *>(&pos), sizeof(pos));
+            uint8_t x = (pos >> 8) & 0xFF;
+            uint8_t y = pos & 0xFF;
+            dungeon.type_grid.at(x, y) = stair_type;
+        }
+    };
+
+    read_stairs(CELL_STAIR_UP);
+    read_stairs(CELL_STAIR_DOWN);
+
+    return dungeon;
 }
-
-// int dungeon_serialize(const dungeon_data *dungeon, FILE *file, uint8_t pc_x, uint8_t pc_y)
-// {
-//     if (!dungeon || !file)
-//         return 1;
-
-//     uint8_t x, y;
-//     uint16_t i, pos;
-//     vector *up_stairs = vector_init(0, sizeof(uint16_t));
-//     vector *down_stairs = vector_init(0, sizeof(uint16_t));
-
-//     if (!up_stairs || !down_stairs)
-//         return 1;
-
-//     // marker
-//     const char *marker = DUNGEON_FILE_HEADER;
-//     fwrite(marker, sizeof(char), 12, file);
-
-//     // version
-//     const uint32_t version = htobe32(0);
-//     fwrite(&version, sizeof(uint32_t), 1, file);
-
-//     // file size (put dummy number for now, we'll update it later)
-//     long file_pos = ftell(file);
-//     uint32_t file_size = 0;
-//     fwrite(&file_size, sizeof(uint32_t), 1, file);
-
-//     // pc coordinates
-//     fwrite(&pc_x, sizeof(uint8_t), 1, file);
-//     fwrite(&pc_y, sizeof(uint8_t), 1, file);
-
-//     // hardness matrix (also gather stair info)
-//     for (y = 0; y < DUNGEON_HEIGHT; y++)
-//     {
-//         for (x = 0; x < DUNGEON_WIDTH; x++)
-//         {
-//             if (dungeon->cell_types[y][x] == CELL_STAIR_UP)
-//             {
-//                 pos = ((uint16_t)x << 8) | y;
-//                 vector_push_back(up_stairs, &pos);
-//             }
-//             else if (dungeon->cell_types[y][x] == CELL_STAIR_DOWN)
-//             {
-//                 pos = ((uint16_t)x << 8) | y;
-//                 vector_push_back(down_stairs, &pos);
-//             }
-
-//             fwrite(&dungeon->cell_types[y][x], sizeof(uint8_t), 1, file);
-//         }
-//     }
-
-//     // rooms: count
-//     const int16_t num_rooms = htobe16(dungeon->num_rooms);
-//     fwrite(&num_rooms, sizeof(uint16_t), 1, file);
-
-//     // rooms: info
-//     char room_x, room_y, room_w, room_h;
-//     for (i = 0; i < dungeon->num_rooms; i++)
-//     {
-//         room_x = dungeon->rooms[i].center_x;
-//         room_y = dungeon->rooms[i].center_y;
-//         room_w = dungeon->rooms[i].width;
-//         room_h = dungeon->rooms[i].height;
-
-//         // move center coordinate to top left corner
-//         room_x -= room_w / 2;
-//         room_y -= room_h / 2;
-
-//         fwrite(&room_x, sizeof(char), 1, file);
-//         fwrite(&room_y, sizeof(char), 1, file);
-//         fwrite(&room_w, sizeof(char), 1, file);
-//         fwrite(&room_h, sizeof(char), 1, file);
-//     }
-
-//     // up stairs: count
-//     const uint16_t num_up_stairs = htobe16(up_stairs->size);
-//     fwrite(&num_up_stairs, sizeof(uint16_t), 1, file);
-
-//     // up stairs: info
-//     fwrite(up_stairs->_elems, sizeof(uint16_t), up_stairs->size, file);
-
-//     // down stairs: count
-//     const uint16_t num_down_stairs = htobe16(down_stairs->size);
-//     fwrite(&num_down_stairs, sizeof(uint16_t), 1, file);
-
-//     // down stairs: info
-//     fwrite(down_stairs->_elems, sizeof(uint16_t), down_stairs->size, file);
-
-//     long end_pos = ftell(file);
-
-//     fseek(file, file_pos, SEEK_SET);
-
-//     file_size = htobe32(end_pos);
-//     fwrite(&file_size, sizeof(file_size), 1, file);
-
-//     fseek(file, end_pos, SEEK_SET);
-
-//     vector_destroy(up_stairs);
-//     vector_destroy(down_stairs);
-
-//     return 0;
-// }
-
-// int dungeon_deserialize(dungeon_data *dungeon, FILE *file, uint8_t *pc_x, uint8_t *pc_y)
-// {
-//     if (!dungeon || !file)
-//         return 1;
-
-//     dungeon->north = dungeon->east = dungeon->south = dungeon->west = dungeon->up = dungeon->down = NULL;
-
-//     uint8_t x, y;
-//     uint16_t i;
-
-//     // marker
-//     char marker[13];
-//     fread(marker, sizeof(char), 12, file);
-//     marker[12] = 0;
-//     if (strcmp(DUNGEON_FILE_HEADER, marker))
-//     {
-//         fprintf(stderr, "File read error, unknown file marker\n");
-//         return 1;
-//     }
-
-//     // version
-//     uint32_t version;
-//     fread(&version, sizeof(uint32_t), 1, file);
-//     version = be32toh(version);
-
-//     // file size
-//     uint32_t file_size;
-//     fread(&file_size, sizeof(uint32_t), 1, file);
-//     file_size = be32toh(file_size);
-
-//     // pc coordinates
-//     fread(pc_x, sizeof(uint8_t), 1, file);
-//     fread(pc_y, sizeof(uint8_t), 1, file);
-
-//     // hardness
-//     fread(&dungeon->cell_hardness[0][0], sizeof(uint8_t), DUNGEON_WIDTH * DUNGEON_HEIGHT, file);
-
-//     for (y = 0; y < DUNGEON_HEIGHT; y++)
-//     {
-//         for (x = 0; x < DUNGEON_WIDTH; x++)
-//         {
-//             // Fill all >0 to rock, and all =0 to corridors (other 0-hardness cells with overwrite this)
-//             dungeon->cell_types[y][x] = (dungeon->cell_hardness[y][x] > 0) ? CELL_ROCK : CELL_CORRIDOR;
-//         }
-//     }
-
-//     // rooms
-//     uint16_t num_rooms;
-//     fread(&num_rooms, sizeof(uint16_t), 1, file);
-//     num_rooms = be16toh(num_rooms);
-
-//     dungeon->num_rooms = num_rooms;
-//     dungeon->rooms = (dungeon_room_data *)malloc(dungeon->num_rooms * sizeof(*dungeon->rooms));
-
-//     uint8_t room_x, room_y, room_w, room_h;
-//     for (i = 0; i < num_rooms; i++)
-//     {
-//         fread(&room_x, sizeof(uint8_t), 1, file);
-//         fread(&room_y, sizeof(uint8_t), 1, file);
-//         fread(&room_w, sizeof(uint8_t), 1, file);
-//         fread(&room_h, sizeof(uint8_t), 1, file);
-
-//         dungeon->rooms[i].center_x = room_x + room_w / 2;
-//         dungeon->rooms[i].center_y = room_y + room_h / 2;
-//         dungeon->rooms[i].width = room_w;
-//         dungeon->rooms[i].height = room_h;
-
-//         for (x = room_x; x < room_x + room_w; x++)
-//         {
-//             for (y = room_y; y < room_y + room_h; y++)
-//             {
-//                 dungeon->cell_types[y][x] = CELL_ROOM;
-//             }
-//         }
-//     }
-
-//     uint16_t pos;
-//     uint8_t stair_x, stair_y;
-
-//     // up stairs
-//     uint16_t num_up_stairs;
-//     fread(&num_up_stairs, sizeof(uint16_t), 1, file);
-//     num_up_stairs = be16toh(num_up_stairs);
-
-//     for (i = 0; i < num_up_stairs; i++)
-//     {
-//         fread(&pos, sizeof(uint16_t), 1, file);
-//         stair_x = (pos >> 8) & 0xFF;
-//         stair_y = (pos) & 0xFF;
-
-//         dungeon->cell_types[stair_y][stair_x] = CELL_STAIR_UP;
-//     }
-
-//     // down stairs
-//     uint16_t num_down_stairs;
-//     fread(&num_down_stairs, sizeof(uint16_t), 1, file);
-//     num_down_stairs = be16toh(num_down_stairs);
-
-//     for (i = 0; i < num_down_stairs; i++)
-//     {
-//         fread(&pos, sizeof(uint16_t), 1, file);
-//         stair_x = (pos >> 8) & 0xFF;
-//         stair_y = (pos) & 0xFF;
-
-//         dungeon->cell_types[stair_y][stair_x] = CELL_STAIR_DOWN;
-//     }
-
-//     return 0;
-// }
