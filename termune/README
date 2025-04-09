@@ -1,19 +1,17 @@
 # termune / coms327 rougelike
 
-Assignment 1.06 - “Fog of War” and porting to C++
+Assignment 1.07 - Monster and Object Parsing
 ---
 
-Now in C++!
+This assignment implements a parser for monster and object definition files as described in the spec.  
+The program reads from `~/.rlg327/monster_desc.txt` and `~/.rlg327/object_desc.txt`, parses each definition, and prints them out in the required format.
 
-Game controls are identical to the requirements in the spec. (plus `Shift+H` as an additional debug cheat to show rock hardness)
-The game ends when either the player is defeated, or all monsters are defeated.
-
-The game window is centered in the terminal in cases where the terminal size is greater than the expected 80x24.
+This assignment **does not** launch the game. It just reads the definition files and prints their contents, allowing verification of correct parsing.
 
 ---
 
 Build instructions
-```
+```bash
 # Navigate to base directory (with CHANGELOG, Makefile, and README)
 make
 ```
@@ -21,11 +19,11 @@ make
 ---
 
 Usage
-```
-build/bin/termune [--save] [--load] [--nummon <int>]
+```bash
+build/bin/termune # [--save] [--load] [--nummon <int>]
 ```
 
-Options:
+~~Options:~~ **Options are not used in the program for this assignment**
  - `--save` saves the current dungeon to disk at `~/.rlg327/dungeon`
  - `--load` loads the last saved dungeon from disk at `~/.rlg327/dungeon`
  - `--nummon <int>` sets the number of monsters in the dungeon (default: 10).
@@ -34,6 +32,6 @@ Options:
 ---
 
 Uninstall
-```
+```bash
 make clean
 ```

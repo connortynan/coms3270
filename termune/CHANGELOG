@@ -1,5 +1,13 @@
 ## RECENT AT TOP
 
+4/8/25 11:00 PM:
+    - Finished parser_helpers and (monster/object)_parser
+    - Wrote new main (termune.cpp) for testing parsing
+    - Renamed .h files to .hpp
+
+4/7/25 3:00 PM:
+    - Implemented generic parser concept
+
 4/2/25 7:45 PM
     - Added show rock hardness toggle (`Shift+H`)
     - Even more refactoring (for good measure)
