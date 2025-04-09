@@ -71,6 +71,10 @@ int main()
             for (const auto &m : monsters)
                 printMonster(m);
         }
+        else
+        {
+            std::cerr << "Monster description file not found, looking for \"" << getRLGPath("monster_desc.txt") << "\"" << std::endl;
+        }
 
         std::ifstream objectFile(getRLGPath("object_desc.txt"));
         if (objectFile)
@@ -79,6 +83,10 @@ int main()
             auto objects = oparser.parseAll();
             for (const auto &o : objects)
                 printObject(o);
+        }
+        else
+        {
+            std::cerr << "Object description file not found, looking for \"" << getRLGPath("object_desc.txt") << "\"" << std::endl;
         }
     }
     catch (const std::exception &e)
