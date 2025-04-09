@@ -7,9 +7,9 @@
 #include <fstream>
 #include <iostream>
 
-#include "game_context.h"
-#include "ui.h"
-#include "util/noise.h"
+#include "game_context.hpp"
+#include "ui.hpp"
+#include "util/noise.hpp"
 
 constexpr mapsize_t DUNGEON_WIDTH = 80;
 constexpr mapsize_t DUNGEON_HEIGHT = 21;

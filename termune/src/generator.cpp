@@ -1,12 +1,12 @@
-#include "dungeon.h"
+#include "dungeon.hpp"
 
 #include <cmath>
 #include <random>
 #include <limits>
 
-#include "util/noise.h"
-#include "util/pathing.h"
-#include "util/img_proc.h"
+#include "util/noise.hpp"
+#include "util/pathing.hpp"
+#include "util/img_proc.hpp"
 
 void Dungeon::Generator::generate_dungeon(Dungeon &dungeon, const Parameters &params, int seed = 0)
 {

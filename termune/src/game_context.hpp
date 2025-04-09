@@ -5,10 +5,10 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "entity.h"
-#include "dungeon.h"
-#include "util/event_queue.h"
-#include "util/shadowcast.h"
+#include "entity.hpp"
+#include "dungeon.hpp"
+#include "util/event_queue.hpp"
+#include "util/shadowcast.hpp"
 
 static constexpr mapsize_t VISIBILITY_RADIUS = 3;
 

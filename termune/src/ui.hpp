@@ -10,8 +10,8 @@
 #include <memory>
 #include <array>
 #include <string>
-#include "types.h"
-#include "game_context.h"
+#include "types.hpp"
+#include "game_context.hpp"
 
 class UiManager
 {

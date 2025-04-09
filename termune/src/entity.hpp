@@ -2,7 +2,7 @@
 
 #include <limits>
 
-#include "types.h"
+#include "types.hpp"
 
 constexpr char DEFAULT_PLAYER_SPEED = 10;
 

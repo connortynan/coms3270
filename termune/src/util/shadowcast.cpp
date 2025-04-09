@@ -1,4 +1,4 @@
-#include "util/shadowcast.h"
+#include "util/shadowcast.hpp"
 
 #include <cmath>
 #include <cstdio>

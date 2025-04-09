@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <cstdint>
 
-#include "dungeon.h"
+#include "dungeon.hpp"
 
 #define DUNGEON_FILE_HEADER "RLG327-S2025"
 #define DUNGEON_HEADER_LEN 12

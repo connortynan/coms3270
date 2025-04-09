@@ -1,11 +1,11 @@
-#include "object_parser.h"
+#include "object_parser.hpp"
 #include <sstream>
 #include <algorithm>
 #include <stdexcept>
 #include <cctype>
 #include <string>
 
-#include "util/parser_helpers.h"
+#include "util/parser_helpers.hpp"
 
 using namespace ParserHelpers;
 

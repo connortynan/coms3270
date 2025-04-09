@@ -3,8 +3,8 @@
 #include <filesystem>
 #include <string>
 
-#include "monster_parser.h"
-#include "object_parser.h"
+#include "monster_parser.hpp"
+#include "object_parser.hpp"
 
 void printMonster(const MonsterDesc &m)
 {

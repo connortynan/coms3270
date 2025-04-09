@@ -1,4 +1,4 @@
-#include "util/pathing.h"
+#include "util/pathing.hpp"
 
 #include <algorithm>
 #include <queue>

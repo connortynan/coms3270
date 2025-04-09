@@ -1,11 +1,11 @@
-#include "monster_parser.h"
+#include "monster_parser.hpp"
 #include <sstream>
 #include <algorithm>
 #include <cctype>
 #include <stdexcept>
 #include <cstdio>
 
-#include "util/parser_helpers.h"
+#include "util/parser_helpers.hpp"
 
 using namespace ParserHelpers;
 

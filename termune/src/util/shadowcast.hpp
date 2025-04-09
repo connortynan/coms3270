@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstddef>
-#include "util/grid.h"
+#include "util/grid.hpp"
 
 namespace ShadowCast
 {

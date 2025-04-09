@@ -1,6 +1,6 @@
-#include "entity.h"
+#include "entity.hpp"
 
-#include "ui.h"
+#include "ui.hpp"
 
 bool Entity::move(int dx, int dy, GameContext &g, bool force)
 {

@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 
-#include "util/parser.h"
-#include "util/dice.h"
+#include "util/parser.hpp"
+#include "util/dice.hpp"
 
 struct MonsterDesc
 {

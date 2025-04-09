@@ -1,4 +1,4 @@
-#include "noise.h"
+#include "noise.hpp"
 
 #include <array>
 #include <random>
@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include "util/generic_utils.h"
+#include "util/generic_utils.hpp"
 
 constexpr int TableSize = 512;
 

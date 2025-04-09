@@ -11,7 +11,7 @@
 
 #define VERBOSE_PARSE_LOGGING
 #ifdef VERBOSE_PARSE_LOGGING
-#include "logging.h"
+#include "logging.hpp"
 #endif
 
 template <typename T>

@@ -1,4 +1,4 @@
-#include "ui.h"
+#include "ui.hpp"
 
 #include <cstdarg>
 #include <cstring>
@@ -6,8 +6,8 @@
 #include <unistd.h>
 #include <cmath>
 #include <algorithm>
-#include "dungeon.h"
-#include "game_context.h"
+#include "dungeon.hpp"
+#include "game_context.hpp"
 
 static constexpr short COLOR_TITLE_LIGHT = 64;
 static constexpr short COLOR_TITLE_DARK = 65;

@@ -1,9 +1,9 @@
-#include "entity.h"
+#include "entity.hpp"
 
-#include "game_context.h"
-#include "util/pathing.h"
-#include "util/shadowcast.h"
-#include "dungeon.h"
+#include "game_context.hpp"
+#include "util/pathing.hpp"
+#include "util/shadowcast.hpp"
+#include "dungeon.hpp"
 
 class DistanceNode : public Pathing::Node
 {

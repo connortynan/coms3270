@@ -3,8 +3,8 @@
 #include <vector>
 #include <iostream>
 
-#include "types.h"
-#include "util/grid.h"
+#include "types.hpp"
+#include "util/grid.hpp"
 
 class Dungeon
 {

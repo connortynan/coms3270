@@ -5,7 +5,7 @@
 #include <functional>
 #include <vector>
 #include <algorithm>
-#include "../util/dice.h"
+#include "../util/dice.hpp"
 
 namespace ParserHelpers
 {

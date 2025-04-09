@@ -1,8 +1,8 @@
 #pragma once
 
 #include <algorithm>
-#include "util/grid.h"
-#include "util/generic_utils.h"
+#include "util/grid.hpp"
+#include "util/generic_utils.hpp"
 
 template <typename T>
 Grid<T> gaussian_blur(Grid<T> &img, bool inplace = false)
