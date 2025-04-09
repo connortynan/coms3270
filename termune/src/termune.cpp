@@ -10,21 +10,16 @@ void printMonster(const MonsterDesc &m)
 {
     std::cout << m.name << "\n";
     std::cout << m.description;
-    std::cout << m.symbol << "\n";
-
     for (const auto &c : m.colors)
         std::cout << c << " ";
     std::cout << "\n";
-
     printDice(m.speed);
-
     for (const auto &a : m.abilities)
         std::cout << a << " ";
     std::cout << "\n";
-
     printDice(m.hp);
     printDice(m.dam);
-
+    std::cout << m.symbol << "\n";
     std::cout << m.rarity << "\n\n";
 }
 
@@ -33,11 +28,9 @@ void printObject(const ObjectDesc &o)
     std::cout << o.name << "\n";
     std::cout << o.description;
     std::cout << o.type << "\n";
-
     for (const auto &c : o.colors)
         std::cout << c << " ";
     std::cout << "\n";
-
     printDice(o.hit);
     printDice(o.dam);
     printDice(o.dodge);
@@ -46,7 +39,6 @@ void printObject(const ObjectDesc &o)
     printDice(o.speed);
     printDice(o.attr);
     printDice(o.val);
-
     std::cout << (o.is_artifact ? "TRUE" : "FALSE") << "\n";
     std::cout << o.rarity << "\n\n";
 }
