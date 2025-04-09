@@ -7,10 +7,17 @@
 #include <string>
 #include <mutex>
 #include <cstdarg>
+#include <cstdio>
+
+#include <iostream>
 
 #ifndef LOG_FILE
-#define LOG_FILE "out.log"
+#define LOG_FILE stderr
 #endif
+
+// Let user just -DLOG_FILE=stdout or stderr or a filename
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
 
 namespace Log
 {
@@ -29,11 +36,23 @@ namespace Log
         return oss.str();
     }
 
+    inline FILE *openLogStream()
+    {
+        static std::string target = TOSTRING(LOG_FILE);
+        if (target == "stdout")
+            return stdout;
+        if (target == "stderr" || target == "stdlog")
+            return stderr;
+
+        return fopen(target.c_str(), "a");
+    }
+
     inline void write(const char *format, ...)
     {
+
         std::lock_guard<std::mutex> lock(log_mutex());
 
-        FILE *log_file = fopen(LOG_FILE, "a");
+        FILE *log_file = openLogStream();
         if (!log_file)
             return;
 
@@ -45,15 +64,21 @@ namespace Log
         va_end(args);
 
         std::fprintf(log_file, "\n");
-        fclose(log_file);
+
+        if (log_file != stdout && log_file != stderr)
+            fclose(log_file);
     }
 
     inline void clear()
     {
         std::lock_guard<std::mutex> lock(log_mutex());
-        FILE *log_file = fopen(LOG_FILE, "w");
+
+        static std::string target = TOSTRING(LOG_FILE);
+        if (target == "stdout" || target == "stderr" || target == "stdlog")
+            return; // Don't clear standard streams
+
+        FILE *log_file = fopen(target.c_str(), "w");
         if (log_file)
             fclose(log_file);
     }
-
-} // namespace Log
+}
