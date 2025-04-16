@@ -1,82 +1,57 @@
 #pragma once
 
-#include <limits>
-
+#include <vector>
+#include <string>
 #include "types.hpp"
+#include "util/colors.hpp"
 
-constexpr char DEFAULT_PLAYER_SPEED = 10;
-
-class UiManager;
 class GameContext;
-
-constexpr entity_id_t ENTITY_NONE = std::numeric_limits<entity_id_t>::max();
-constexpr entity_id_t ENTITY_PLAYER = 0;
+class UiManager;
 
 class Entity
 {
 public:
-    Entity(mapsize_t x, mapsize_t y, char speed, char display_char, entity_id_t id = ENTITY_NONE) : x(x), y(y), speed(speed), id(id), ch(display_char) {}
-    virtual ~Entity() {}
+    mapsize_t x, y;
+    char symbol;
+    int z;
 
+    std::vector<ColorAttr> colors;
+    bool active = true;
+
+    Entity(mapsize_t x, mapsize_t y, char sym, std::vector<ColorAttr> cols, int zindex = 0)
+        : x(x), y(y), symbol(sym), colors(std::move(cols)), z(zindex) {}
+
+    Entity(mapsize_t x, mapsize_t y, char sym, ColorAttr col, int zindex = 0)
+        : x(x), y(y), symbol(sym), colors({col}), z(zindex) {}
+
+    virtual ~Entity() = default;
+
+    // Called each game tick (characters override this)
+    virtual void update(GameContext &g) {}
+
+    // Move this entity on the map
     virtual bool move(int dx, int dy, GameContext &g, bool force = false);
 
-public:
-    mapsize_t x;
-    mapsize_t y;
-    char speed;
-    bool alive = true;
-    entity_id_t id;
-    char ch;
-};
+    // Render the entity on the screen, with the specified color index
+    // (0 = first color in the vector, 1 = second, etc.)
+    // If the color index is out of bounds, it will default to the first color
+    virtual void render(UiManager &ui, unsigned char color_index) const;
 
-class Player : public Entity
-{
-public:
-    Player(mapsize_t x = 0, mapsize_t y = 0) : Entity(x, y, DEFAULT_PLAYER_SPEED, '@', ENTITY_PLAYER) {}
-};
+    // Called when another entity moves into this one
+    virtual void onCollision(Entity &other) {}
 
-class Monster : public Entity
-{
-public:
-    static constexpr mapsize_t EMPTY_TARGET = std::numeric_limits<mapsize_t>::max();
-
-    Monster(mapsize_t x, mapsize_t y, char speed, entity_id_t id,
-            bool intelligent, bool telepathic, bool erratic, bool tunneling)
-        : Entity(x, y, speed, '?', id),
-          intelligent(intelligent),
-          telepathic(telepathic),
-          erratic(erratic),
-          tunneling(tunneling)
+    // Downcasting helper functions (used to downcast to derived types)
+    // These are not safe, so wrap in a check for nullptr
+    // `if (auto &derived = entity->as<DerivedType>()) { ... }` is safe
+    template <typename T>
+    T *as()
     {
-        ch = "0123456789abcdef"[characteristics()];
+        return dynamic_cast<T *>(this);
     }
 
-    Monster(mapsize_t x, mapsize_t y, char speed, entity_id_t id, int flags) : Entity(x, y, speed, "0123456789abcdef"[flags], id)
+    template <typename T>
+    const T *as() const
     {
-        intelligent = flags & 1;
-        telepathic = (flags >> 1) & 1;
-        tunneling = (flags >> 2) & 1;
-        erratic = (flags >> 1) & 1;
+        return dynamic_cast<const T *>(this);
     }
-
-    // Puts characteristics in 4 bit integer in order: ETLI
-    unsigned char characteristics() const
-    {
-        return (erratic << 3) | (tunneling << 2) | (telepathic << 1) | intelligent;
-    }
-
-    void get_desired_move(int &dx, int &dy, GameContext &g) const;
-    bool move(int dx, int dy, GameContext &g, bool force = false);
-
-    static void update_global_maps(GameContext &game);
-
-private:
-    mapsize_t target_x = EMPTY_TARGET;
-    mapsize_t target_y = EMPTY_TARGET;
-    bool has_line_of_sight = false;
-
-    bool intelligent;
-    bool telepathic;
-    bool erratic;
-    bool tunneling;
 };

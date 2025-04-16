@@ -2,73 +2,61 @@
 
 #include <queue>
 #include <vector>
+#include <functional>
+#include <algorithm>
 
-template <typename queued_t>
 class EventQueue
 {
+public:
+    // Function signature for the callback, which returns true if the event should halt the queue
+    using Callback = std::function<bool()>;
+
+    void add(Callback cb, tick_t delay);
+    void process();
+    void flush();
+    tick_t current_tick() const;
+
 private:
     struct Event
     {
-        queued_t data;
+        Callback callback;
         tick_t target_tick;
-
         bool operator>(const Event &other) const
         {
-            if (target_tick != other.target_tick)
-                return target_tick > other.target_tick;
-            return data > other.data;
+            return target_tick > other.target_tick;
         }
     };
 
-    std::priority_queue<Event, std::vector<Event>, std::greater<Event>> event_queue_;
+    std::priority_queue<Event, std::vector<Event>, std::greater<Event>> queue_;
     tick_t current_tick_ = 0;
-
-public:
-    EventQueue() = default;
-
-    void add(const queued_t &data, tick_t delay)
-    {
-        event_queue_.push({data, current_tick_ + delay});
-    }
-
-    void advance_tick(tick_t delta = 1)
-    {
-        current_tick_ += delta;
-    }
-
-    tick_t current_tick() const
-    {
-        return current_tick_;
-    }
-
-    std::vector<queued_t> resolve_past_events()
-    {
-        std::vector<queued_t> resolved;
-        while (!event_queue_.empty() && event_queue_.top().target_tick <= current_tick_)
-        {
-            resolved.push_back(event_queue_.top().data);
-            event_queue_.pop();
-        }
-        return resolved;
-    }
-
-    std::vector<queued_t> resolve_events_until(const queued_t &target)
-    {
-        std::vector<queued_t> resolved;
-
-        while (!event_queue_.empty())
-        {
-            const auto &event = event_queue_.top();
-            event_queue_.pop();
-            if (event.target_tick > current_tick_)
-                current_tick_ = event.target_tick;
-
-            resolved.push_back(event.data);
-
-            if (event.data == target)
-                break;
-        }
-
-        return resolved;
-    }
 };
+
+inline void EventQueue::add(Callback cb, tick_t delay)
+{
+    queue_.push({std::move(cb), current_tick_ + delay});
+}
+
+inline void EventQueue::process()
+{
+    while (!queue_.empty())
+    {
+        auto event = queue_.top();
+        queue_.pop();
+
+        current_tick_ = std::max(current_tick_, event.target_tick);
+
+        if (event.callback())
+            break;
+    }
+}
+
+inline void EventQueue::flush()
+{
+    while (!queue_.empty())
+        queue_.pop();
+}
+
+inline tick_t EventQueue::current_tick() const
+{
+    return current_tick_;
+}
