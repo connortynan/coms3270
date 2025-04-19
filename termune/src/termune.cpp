@@ -1,90 +1,111 @@
-#include <iostream>
 #include <fstream>
-#include <filesystem>
-#include <string>
+#include <iostream>
+#include <cstdlib>
+#include <ctime>
+#include <sys/stat.h>
+#include <unistd.h>
 
-#include "monster_parser.hpp"
-#include "object_parser.hpp"
+#include "game_context.hpp"
+#include "ui.hpp"
+#include "util/noise.hpp"
+#include "util/fs.hpp"
+#include "util/colors.hpp"
 
-void printMonster(const MonsterDesc &m)
+constexpr mapsize_t DUNGEON_WIDTH = 80;
+constexpr mapsize_t DUNGEON_HEIGHT = 21;
+
+int main(int argc, char const *argv[])
 {
-    std::cout << m.name << "\n";
-    std::cout << m.description;
-    for (const auto &c : m.colors)
-        std::cout << c << " ";
-    std::cout << "\n";
-    printDice(m.speed);
-    for (const auto &a : m.abilities)
-        std::cout << a << " ";
-    std::cout << "\n";
-    printDice(m.hp);
-    printDice(m.dam);
-    std::cout << m.symbol << "\n";
-    std::cout << m.rarity << "\n\n";
-}
-
-void printObject(const ObjectDesc &o)
-{
-    std::cout << o.name << "\n";
-    std::cout << o.description;
-    std::cout << o.type << "\n";
-    for (const auto &c : o.colors)
-        std::cout << c << " ";
-    std::cout << "\n";
-    printDice(o.hit);
-    printDice(o.dam);
-    printDice(o.dodge);
-    printDice(o.def);
-    printDice(o.weight);
-    printDice(o.speed);
-    printDice(o.attr);
-    printDice(o.val);
-    std::cout << (o.is_artifact ? "TRUE" : "FALSE") << "\n";
-    std::cout << o.rarity << "\n\n";
-}
-
-std::string getRLGPath(const std::string &filename)
-{
-    const char *home = getenv("HOME");
-    if (!home)
-        throw std::runtime_error("Could not determine HOME directory.");
-    return std::string(home) + "/.rlg327/" + filename;
-}
-
-int main()
-{
-    try
+    // Handle CLI args
+    bool save = false, load = false;
+    int num_mon = 10;
+    for (int i = 1; i < argc; ++i)
     {
-        std::ifstream monsterFile(getRLGPath("monster_desc.txt"));
-        if (monsterFile)
-        {
-            MonsterParser mparser(monsterFile, "BEGIN MONSTER", "RLG327 MONSTER DESCRIPTION 1");
-            auto monsters = mparser.parseAll();
-            for (const auto &m : monsters)
-                printMonster(m);
-        }
-        else
-        {
-            std::cerr << "Monster description file not found, looking for \"" << getRLGPath("monster_desc.txt") << "\"" << std::endl;
-        }
-
-        std::ifstream objectFile(getRLGPath("object_desc.txt"));
-        if (objectFile)
-        {
-            ObjectParser oparser(objectFile, "BEGIN OBJECT", "RLG327 OBJECT DESCRIPTION 1");
-            auto objects = oparser.parseAll();
-            for (const auto &o : objects)
-                printObject(o);
-        }
-        else
-        {
-            std::cerr << "Object description file not found, looking for \"" << getRLGPath("object_desc.txt") << "\"" << std::endl;
-        }
+        std::string arg = argv[i];
+        if (arg == "--save")
+            save = true;
+        else if (arg == "--load")
+            load = true;
+        else if (arg == "--nummon" && i + 1 < argc)
+            num_mon = std::max(1, atoi(argv[++i]));
     }
-    catch (const std::exception &e)
+
+    // Init RNG, noise, and file system
+    fs::ensure_data_dir_exists();
+    Noise::generate_permutation(time(nullptr));
+    init_color_pairs(COLOR_BLACK);
+
+    std::string filename = fs::join(fs::rlg327_data_dir(), "dungeon");
+
+    Dungeon::Generator::Parameters params = {
+        .min_room_width = 6,
+        .max_room_width = 20,
+        .min_room_height = 4,
+        .max_room_height = 10,
+        .min_num_rooms = 6,
+        .max_num_rooms = 10,
+        .min_num_stairs = 2,
+        .max_num_stairs = 4,
+        .min_rock_hardness = 128,
+        .max_rock_hardness = 192,
+        .rock_hardness_smoothness = 5,
+        .rock_hardness_noise_amount = 50.f};
+
+    // Initialize core components
+    GameContext game(params, DUNGEON_WIDTH, DUNGEON_HEIGHT, num_mon, time(nullptr));
+    UiManager ui(game, 10.f);
+    game.player.ui = &ui;
+
+    // Load or generate dungeon
+    if (load)
     {
-        std::cerr << "Error: " << e.what() << "\n";
-        return 1;
+        std::ifstream infile(filename, std::ios::binary);
+        mapsize_t x = 0, y = 0;
+        if (!infile)
+        {
+            std::cerr << "Failed to load dungeon.\n";
+            return 1;
+        }
+        Dungeon d = Dungeon::deserialize(infile, x, y);
+        game.set_dungeon(d, x, y);
+    }
+    else
+    {
+        game.regenerate_dungeon();
+    }
+
+    if (save)
+    {
+        std::ofstream outfile(filename, std::ios::binary);
+        if (outfile)
+            game.dungeon.serialize(outfile, game.player.x, game.player.y);
+    }
+
+    // Schedule all character events
+    game.schedule_character_event(&game.player);
+    for (auto *m : game.filtered<Character>())
+    {
+        if (m != &game.player)
+            game.schedule_character_event(m);
+    }
+
+    // Show title and run
+    ui.display_title();
+    getch();
+    ui.display_message("Spawned at (%d, %d)", game.player.x, game.player.y);
+
+    game.update_on_change();
+    ui.update_game_window();
+
+    while (game.running && ui.running)
+    {
+        game.process_events();
+    }
+
+    if (ui.running)
+    {
+        ui.display_message(game.player.active ? "YOU WIN! (Press any key)" : "YOU LOSE. (Press any key)");
+        getch();
     }
 
     return 0;

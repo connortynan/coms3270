@@ -16,7 +16,7 @@
 class UiManager
 {
 public:
-    explicit UiManager(GameContext &game);
+    explicit UiManager(GameContext &game, float target_fps = 5.f);
     ~UiManager();
 
     static constexpr int MESSAGE_HEIGHT = 1;
@@ -62,7 +62,12 @@ public:
     void display_status(const char *format, ...);
     void display_title();
     void update_game_window();
-    void handle_player_input();
+
+    bool wait_for_input(int &dx, int &dy, bool &force);
+
+    // return true only when the move should advance the game state
+    bool get_player_input(int &dx, int &dy, bool &force);
+
     void stop() { running = false; }
 
     bool running = true;
@@ -85,7 +90,8 @@ private:
     uint16_t term_y = 0;
 
     bool show_monster_window = false;
-    entity_id_t monster_scroll = 0;
+    int monster_vert_scroll = 0;
+    size_t monster_list_open_frame = 0;
 
     mapsize_t teleport_cursor_x = 0;
     mapsize_t teleport_cursor_y = 0;
@@ -93,4 +99,9 @@ private:
     bool fog_of_war = true;
     bool teleport_mode = false;
     bool show_hardness = false;
+
+    std::size_t frame = 0;
+
+    timeval fps_timeout = {0, 0};
+    float target_fps;
 };

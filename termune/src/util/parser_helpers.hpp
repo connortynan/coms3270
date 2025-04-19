@@ -66,7 +66,7 @@ namespace ParserHelpers
             trim(trimmed);
             try
             {
-                out = parseDice(trimmed);
+                out = Dice::parse(trimmed);
                 return true;
             }
             catch (...)

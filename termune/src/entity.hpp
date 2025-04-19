@@ -15,14 +15,11 @@ public:
     char symbol;
     int z;
 
-    std::vector<ColorAttr> colors;
+    std::vector<short> colors;
     bool active = true;
 
-    Entity(mapsize_t x, mapsize_t y, char sym, std::vector<ColorAttr> cols, int zindex = 0)
-        : x(x), y(y), symbol(sym), colors(std::move(cols)), z(zindex) {}
-
-    Entity(mapsize_t x, mapsize_t y, char sym, ColorAttr col, int zindex = 0)
-        : x(x), y(y), symbol(sym), colors({col}), z(zindex) {}
+    Entity(mapsize_t x, mapsize_t y, char sym, std::vector<short> cols, int zindex = 0)
+        : x(x), y(y), symbol(sym), z(zindex), colors(std::move(cols)) {}
 
     virtual ~Entity() = default;
 
@@ -34,8 +31,8 @@ public:
 
     // Render the entity on the screen, with the specified color index
     // (0 = first color in the vector, 1 = second, etc.)
-    // If the color index is out of bounds, it will default to the first color
-    virtual void render(UiManager &ui, unsigned char color_index) const;
+    // If the color index is out of bounds, it will modulo based on colors.size()
+    virtual void render(UiManager &ui, std::size_t color_index) const;
 
     // Called when another entity moves into this one
     virtual void onCollision(Entity &other) {}

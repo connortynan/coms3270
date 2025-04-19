@@ -4,6 +4,9 @@
 
 #include "character.hpp"
 
+constexpr int MONSTER_ZINDEX = 2; // Above items, below player
+
+struct MonsterDesc;
 class Monster : public Character
 {
 public:
@@ -15,18 +18,45 @@ public:
         INTELLIGENT = 1,
         TELEPATHIC = 2,
         ERRATIC = 4,
-        TUNNELING = 8
+        TUNNELING = 8,
+        PASS = 16,
+        PICKUP = 32,
+        DESTROY = 64,
+        UNIQUE = 128,
+        BOSS = 256
     };
 
-    Monster(mapsize_t x, mapsize_t y, char symbol, std::vector<ColorAttr> col,
-            Abilities abilities = Abilities::NONE, int zindex = 0)
-        : Character(x, y, symbol, col, zindex), abilities(abilities) {}
+    Monster(mapsize_t x, mapsize_t y,
+            char symbol,
+            std::vector<short> color,
+            int speed,
+            int max_health,
+            Abilities abilities,
+            const MonsterDesc *desc,
+            const Dice &dmg)
+        : Character(x, y, symbol, color, speed, max_health, dmg, MONSTER_ZINDEX),
+          desc(desc),
+          abilities(abilities) {}
 
-    void get_desired_move(int &dx, int &dy, GameContext &g) const;
+    void get_desired_move(int &dx, int &dy, bool &force, GameContext &g) const;
     virtual bool move(int dx, int dy, GameContext &g, bool force = false) override;
 
+    bool has(Abilities ability) const
+    {
+        return (static_cast<unsigned int>(abilities) & static_cast<unsigned int>(ability)) != 0;
+    }
+
+    std::string_view name() const override;
+    std::string_view description() const override;
+
+    void update_sight(mapsize_t x, mapsize_t y, GameContext &g);
+
 public:
+    const MonsterDesc *desc = nullptr;
     Abilities abilities;
+
+private:
+    bool has_line_of_sight = false;
     mapsize_t target_x = EMPTY_TARGET;
     mapsize_t target_y = EMPTY_TARGET;
 };

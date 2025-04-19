@@ -1,12 +1,9 @@
 # termune / coms327 rougelike
 
-Assignment 1.07 - Monster and Object Parsing
+Assignment 1.07 - Loading Monsters and Objects
 ---
 
-This assignment implements a parser for monster and object definition files as described in the spec.  
-The program reads from `~/.rlg327/monster_desc.txt` and `~/.rlg327/object_desc.txt`, parses each definition, and prints them out in the required format.
-
-This assignment **does not** launch the game. It just reads the definition files and prints their contents, allowing verification of correct parsing.
+Puts monster descriptions into the game, with async input and output for the ui
 
 ---
 
@@ -20,10 +17,10 @@ make
 
 Usage
 ```bash
-build/bin/termune # [--save] [--load] [--nummon <int>]
+build/bin/termune [--save] [--load] [--nummon <int>]
 ```
 
-~~Options:~~ **Options are not used in the program for this assignment**
+Options:
  - `--save` saves the current dungeon to disk at `~/.rlg327/dungeon`
  - `--load` loads the last saved dungeon from disk at `~/.rlg327/dungeon`
  - `--nummon <int>` sets the number of monsters in the dungeon (default: 10).

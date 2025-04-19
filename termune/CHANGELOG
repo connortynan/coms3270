@@ -1,5 +1,17 @@
 ## RECENT AT TOP
 
+4/19/25 3:30 PM:
+    - Fixed color bug for rendering, made flashing colors
+    - Added monster list horizontal scrolling
+
+4/16/25 9:00 PM:
+    - Made it compile, unfinished changes
+    - Updated Makefile to compile faster
+
+4/15/25 10:00 PM:
+    - Refactored game_context
+    - Added entity creation from description
+
 4/8/25 11:00 PM:
     - Finished parser_helpers and (monster/object)_parser
     - Wrote new main (termune.cpp) for testing parsing
