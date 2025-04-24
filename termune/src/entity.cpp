@@ -2,12 +2,12 @@
 #include "game_context.hpp"
 #include "ui.hpp"
 
-void Entity::render(UiManager &ui, std::size_t color_index) const
+void Entity::render(ui::Context &ui, std::size_t color_index) const
 {
     if (!active || colors.empty())
         return;
 
-    WINDOW *w = ui.win(UiManager::WindowID::DUNGEON);
+    WINDOW *w = ui.win(ui::Context::WindowID::DUNGEON);
     short color = colors[color_index % colors.size()];
     wattron(w, COLOR_PAIR(color));
     mvwaddch(w, y, x, symbol);
@@ -30,7 +30,7 @@ bool Entity::move(int dx, int dy, GameContext &g, bool force)
         if (entity == this)
             continue;
 
-        entity->onCollision(*this);
+        entity->on_collision(*this);
     }
 
     g.move_entity(this, x, y, target_x, target_y);

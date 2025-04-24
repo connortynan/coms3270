@@ -1,9 +1,10 @@
 # termune / coms327 rougelike
 
-Assignment 1.07 - Loading Monsters and Objects
+Assignment 1.09 - PC Equipment and Updated Combat
 ---
 
-Puts monster descriptions into the game, with async input and output for the ui
+Adds item equipment, inventory interaction, and turn-based combat with HP
+Item list is currently broken, and combat seems to be bugged, but most everything else works fine
 
 ---
 

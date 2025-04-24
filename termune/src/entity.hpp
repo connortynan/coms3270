@@ -6,7 +6,11 @@
 #include "util/colors.hpp"
 
 class GameContext;
-class UiManager;
+
+namespace ui
+{
+    class Context;
+}
 
 class Entity
 {
@@ -32,10 +36,10 @@ public:
     // Render the entity on the screen, with the specified color index
     // (0 = first color in the vector, 1 = second, etc.)
     // If the color index is out of bounds, it will modulo based on colors.size()
-    virtual void render(UiManager &ui, std::size_t color_index) const;
+    virtual void render(ui::Context &ui, std::size_t color_index) const;
 
     // Called when another entity moves into this one
-    virtual void onCollision(Entity &other) {}
+    virtual void on_collision(Entity &other) {}
 
     // Downcasting helper functions (used to downcast to derived types)
     // These are not safe, so wrap in a check for nullptr

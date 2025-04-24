@@ -192,11 +192,16 @@ void GameContext::run_turn()
 {
     cleanup_dead_entities();
     events.process();
+
+    running = player.active;
+    if (!running)
+        return;
 }
 
 void GameContext::process_events()
 {
-    events.process();
+    while (running && !events.process_one())
+        ;
 }
 
 void GameContext::flush_events()

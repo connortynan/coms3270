@@ -13,6 +13,7 @@ public:
 
     void add(Callback cb, tick_t delay);
     void process();
+    bool process_one();
     void flush();
     tick_t current_tick() const;
 
@@ -38,16 +39,22 @@ inline void EventQueue::add(Callback cb, tick_t delay)
 
 inline void EventQueue::process()
 {
-    while (!queue_.empty())
+    while (!queue_.empty() && !process_one())
+        ;
+}
+
+inline bool EventQueue::process_one()
+{
+    if (!queue_.empty())
     {
         auto event = queue_.top();
         queue_.pop();
 
         current_tick_ = std::max(current_tick_, event.target_tick);
 
-        if (event.callback())
-            break;
+        return event.callback();
     }
+    return true;
 }
 
 inline void EventQueue::flush()

@@ -1,5 +1,13 @@
 ## RECENT AT TOP
 
+4/23/25 9:30 PM:
+    - Bug fixes, finished UI implementation
+    - Started combat system
+
+4/22/25 4:00 PM:
+    - Added object_item and split from object_entity
+    - Refactored UI to be more modular per mode
+
 4/19/25 3:30 PM:
     - Fixed color bug for rendering, made flashing colors
     - Added monster list horizontal scrolling

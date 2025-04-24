@@ -2,6 +2,8 @@
 CXX := g++
 PKG_CONFIG := pkg-config
 
+ROOT_DIR := $(shell pwd)
+
 # Directories
 SRC_DIR := src
 BUILD_DIR := build
@@ -77,7 +79,7 @@ tar: clean
 	fi
 	mkdir -p $(TAR_DIR)
 	mkdir -p $(TAR_DIR)/tynan_connor.assignment-$(version)
-	cp -r $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/* $(TAR_DIR)/tynan_connor.assignment-$(version)
+	cp -r $(ROOT_DIR)/* $(TAR_DIR)/tynan_connor.assignment-$(version)
 	tar -czf $(TAR_DIR)/tynan_connor.assignment-$(version).tar.gz -C $(TAR_DIR) tynan_connor.assignment-$(version)
 	rm -rf $(TAR_DIR)/tynan_connor.assignment-$(version)
 

@@ -7,13 +7,14 @@
 #include "util/parser.hpp"
 #include "util/dice.hpp"
 #include "util/colors.hpp"
-#include "object.hpp"
+#include "object_entity.hpp"
+#include "types.hpp"
 
 struct ObjectDesc
 {
     std::string name;
     std::string description;
-    Object::Type type = Object::Type::NONE;
+    Object::Type type = Object::TYPE_NONE;
     std::vector<short> colors;
 
     Dice weight, hit, dam, dodge, def, speed, attr, val;
@@ -22,7 +23,7 @@ struct ObjectDesc
     int rarity = -1;
 
 public:
-    std::unique_ptr<Object> make_instance(mapsize_t x, mapsize_t y, std::mt19937 &rng) const;
+    std::unique_ptr<ObjectEntity> make_instance(mapsize_t x, mapsize_t y, std::mt19937 &rng) const;
 };
 
 class ObjectParser : public Parser<ObjectDesc>

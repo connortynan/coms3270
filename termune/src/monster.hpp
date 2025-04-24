@@ -49,7 +49,33 @@ public:
     std::string_view name() const override;
     std::string_view description() const override;
 
+    void on_collision(Entity &other) override;
+
     void update_sight(mapsize_t x, mapsize_t y, GameContext &g);
+
+    std::string abilities_string() const
+    {
+        std::string result;
+        if (has(Abilities::INTELLIGENT))
+            result += "SMART, ";
+        if (has(Abilities::TELEPATHIC))
+            result += "TELE, ";
+        if (has(Abilities::ERRATIC))
+            result += "ERRATIC, ";
+        if (has(Abilities::TUNNELING))
+            result += "TUNNEL, ";
+        if (has(Abilities::PASS))
+            result += "PASS, ";
+        if (has(Abilities::PICKUP))
+            result += "PICKUP, ";
+        if (has(Abilities::DESTROY))
+            result += "DESTROY, ";
+
+        if (result.length() < 2)
+            return "<none>";
+        else
+            return result.substr(0, result.length() - 2); // Remove last comma and space
+    }
 
 public:
     const MonsterDesc *desc = nullptr;

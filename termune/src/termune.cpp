@@ -53,7 +53,7 @@ int main(int argc, char const *argv[])
 
     // Initialize core components
     GameContext game(params, DUNGEON_WIDTH, DUNGEON_HEIGHT, num_mon, time(nullptr));
-    UiManager ui(game, 10.f);
+    ui::Context ui(game, 10.f);
     game.player.ui = &ui;
 
     // Load or generate dungeon

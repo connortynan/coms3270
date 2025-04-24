@@ -3,6 +3,19 @@
 #include "util/pathing.hpp"
 #include "util/shadowcast.hpp"
 #include "dungeon.hpp"
+#include "player.hpp"
+
+void Monster::on_collision(Entity &other)
+{
+    if (auto *player = other.as<Player>())
+    {
+        player->health -= damage.roll();
+        if (player->health <= 0)
+        {
+            player->active = false;
+        }
+    }
+}
 
 void Monster::update_sight(mapsize_t x, mapsize_t y, GameContext &g)
 {

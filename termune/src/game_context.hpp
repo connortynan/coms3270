@@ -9,7 +9,6 @@
 #include "entity.hpp"
 #include "player.hpp"
 #include "dungeon.hpp"
-#include "ui.hpp"
 #include "util/event_queue.hpp"
 #include "util/shadowcast.hpp"
 #include "util/grid.hpp"
@@ -99,9 +98,9 @@ private:
     std::vector<MonsterDesc> monster_descs;
     std::vector<ObjectDesc> object_descs;
 
-    std::unordered_set<std::string> claimed_artifacts; // Permanently removed
-    std::unordered_set<std::string> killed_uniques;    // Permanently removed
-    std::unordered_set<std::string> spawned_uniques;   // Currently alive
+    std::unordered_set<const ObjectDesc *> claimed_artifacts; // Permanently removed
+    std::unordered_set<const MonsterDesc *> killed_uniques;   // Permanently removed
+    std::unordered_set<const MonsterDesc *> spawned_uniques;  // Currently alive
 
     unsigned int num_entities;
 
@@ -138,7 +137,7 @@ inline void GameContext::spawn_entity()
 
             // Skip unique monsters that are killed or already spawned
             if (desc.has_ability(Monster::Abilities::UNIQUE) &&
-                (killed_uniques.count(desc.name) || spawned_uniques.count(desc.name)))
+                (killed_uniques.count(&desc) || spawned_uniques.count(&desc)))
                 continue;
 
             if (desc.rarity < std::uniform_int_distribution<>(0, 99)(rng))
@@ -156,7 +155,7 @@ inline void GameContext::spawn_entity()
             add_entity(std::move(monster));
 
             if (desc.has_ability(Monster::Abilities::UNIQUE))
-                spawned_uniques.insert(desc.name);
+                spawned_uniques.insert(&desc);
 
             return;
         }
@@ -167,7 +166,7 @@ inline void GameContext::spawn_entity()
         {
             const ObjectDesc &desc = object_descs[rng() % object_descs.size()];
             // Skip artifacts that are claimed
-            if (desc.is_artifact && claimed_artifacts.count(desc.name))
+            if (desc.is_artifact && claimed_artifacts.count(&desc))
                 continue;
 
             if (desc.rarity < std::uniform_int_distribution<>(0, 99)(rng))

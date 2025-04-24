@@ -32,6 +32,13 @@ struct Dice
         return d;
     }
 
+    std::string to_string() const
+    {
+        char buffer[32];
+        snprintf(buffer, sizeof(buffer), "%d+%dd%d", base, count, sides);
+        return std::string(buffer);
+    }
+
     void print(std::ostream &out = std::cout) const
     {
         out << base << "+" << count << "d" << sides;

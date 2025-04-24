@@ -3,6 +3,8 @@
 #include <iostream>
 #include "util/parser_helpers.hpp"
 
+#include "object_item.hpp"
+
 using namespace ParserHelpers;
 
 void ObjectParser::registerKeywords()
@@ -24,11 +26,11 @@ void ObjectParser::registerKeywords()
         std::vector<std::string> tokens;
         splitWords()(tokens, rest, in);
 
-        o.type = Object::Type::NONE;
+        o.type = Object::TYPE_NONE;
         for (const std::string &token : tokens)
         {
             auto t = object_type_from_string(token);
-            if (t == Object::Type::NONE)
+            if (t == Object::TYPE_NONE)
             {
                 std::cerr << "Invalid TYPE: " << token << '\n';
                 return false;
@@ -130,14 +132,14 @@ bool ObjectParser::validate(const ObjectDesc &o)
 {
     return !o.name.empty() &&
            !o.description.empty() &&
-           o.type != Object::Type::NONE &&
+           o.type != Object::TYPE_NONE &&
            !o.colors.empty() &&
            o.rarity >= 1 && o.rarity <= 100;
 }
 
-std::unique_ptr<Object> ObjectDesc::make_instance(mapsize_t x, mapsize_t y, std::mt19937 &rng) const
+std::unique_ptr<ObjectEntity> ObjectDesc::make_instance(mapsize_t x, mapsize_t y, std::mt19937 &rng) const
 {
-    auto obj = std::make_unique<Object>(
+    auto obj = std::make_unique<ObjectEntity>(
         x, y, type, colors,
         is_artifact, this,
         weight.roll(rng), hit.roll(rng), dam, dodge.roll(rng),
